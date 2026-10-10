@@ -162,7 +162,7 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
 <div class="console">
   <div class="monitor">
     <div class="screen">
-      <iframe id="player" src="about:blank"
+      <iframe id="player" src="about:blank" referrerpolicy="strict-origin-when-cross-origin"
         title="NorthBamaWX live weather stream" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen loading="eager"></iframe>
     </div>
     <h1>Live radar and severe weather alerts, around the clock</h1>
@@ -356,7 +356,7 @@ async function loadPlayer() {
   try {
     const r = await fetch('live.json?t=' + Date.now(), { cache: 'no-store' });
     const id = r.ok && (await r.json()).id;
-    if (id && /^[A-Za-z0-9_-]{11}$/.test(id)) src = `https://www.youtube.com/embed/${id}?autoplay=1&mute=1`;
+    if (id && /^[A-Za-z0-9_-]{11}$/.test(id)) src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&rel=0`;
   } catch (e) {}
   player.src = src;
 }
