@@ -74,6 +74,8 @@ header {
 .live-pill::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--live); animation: pulse 1.6s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: 0.25; } }
 
+.back-link { font: 700 15px/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; text-decoration: none; }
+
 /* Conditions strip */
 .wx-strip {
   display: flex; flex-wrap: wrap; gap: 8px 28px; align-items: baseline;
@@ -357,6 +359,7 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
   <span class="sb-ev" id="sb-ev"></span>
   <span class="sb-area" id="sb-area"></span>
   <a href="https://www.youtube.com/channel/UC4nij4NgHjDJ8i5tv-1wWIA/live" target="_blank" rel="noopener">Watch live coverage</a>
+  <a href="safety.html#tornado">Where to shelter</a>
 </div>
 
 <header>
@@ -364,7 +367,10 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
     <a class="brand" href="./">NORTH<b>BAMA</b>WX</a>
     <div class="tag" style="margin-top:6px">Live weather intelligence · North Alabama &amp; Southern Tennessee</div>
   </div>
+  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+  <a class="back-link" href="safety.html">Storm safety</a>
   <a class="live-pill" href="https://www.youtube.com/channel/UC4nij4NgHjDJ8i5tv-1wWIA/live" target="_blank" rel="noopener">Live 24/7</a>
+  </div>
 </header>
 
 <div class="wx-strip" id="wx" aria-live="polite">
@@ -585,6 +591,7 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
   <div class="follow">
     <a class="btn primary" href="https://www.youtube.com/channel/UC4nij4NgHjDJ8i5tv-1wWIA/live" target="_blank" rel="noopener">Watch live on YouTube</a>
     <a class="btn" href="https://www.facebook.com/NorthBamaWeather/" target="_blank" rel="noopener">Facebook</a>
+    <a class="btn" href="safety.html">Severe weather safety</a>
     <a class="btn" href="https://www.weather.gov/hun/" target="_blank" rel="noopener">NWS Huntsville</a>
   </div>
 </section>
