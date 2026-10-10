@@ -12,6 +12,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230a1626'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='%2333d6ff' stroke-width='4'/%3E%3Cpath d='M32 32 L46 18' stroke='%2333d6ff' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
 <style>
 /* Layout: broadcast control-room — stream as the big monitor, alert board beside it, then coverage and follow strips. */
@@ -129,6 +130,35 @@ section.band { padding-block: 34px; border-top: 1px solid var(--rule); }
 
 .follow { display: flex; flex-wrap: wrap; gap: 12px; }
 
+/* Radar map */
+.radar-box { position: relative; height: 540px; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: #050c16; }
+#radar { position: absolute; inset: 0; }
+.radar-bar {
+  position: absolute; left: 12px; bottom: 12px; z-index: 500; display: flex; align-items: center; gap: 10px;
+  background: rgba(10,22,38,0.88); border: 1px solid var(--rule); border-radius: 4px; padding: 6px 10px;
+  font: 500 12px/1 var(--data); color: var(--ink);
+}
+.radar-bar button { all: unset; cursor: pointer; font: 700 15px/1 var(--display); letter-spacing: 0.08em; color: var(--radar); padding: 2px 4px; }
+.radar-bar button:focus-visible { outline: 2px solid var(--radar); }
+#radar-time { font-variant-numeric: tabular-nums; min-width: 7ch; }
+.leaflet-container { background: #050c16; font: 13px/1.4 var(--body); }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel); color: var(--ink); }
+.leaflet-popup-content b { font: 700 16px/1.2 var(--display); letter-spacing: 0.03em; }
+.leaflet-control-attribution { background: rgba(10,22,38,0.75) !important; color: var(--ink-dim) !important; }
+.leaflet-control-attribution a { color: var(--ink-dim) !important; }
+@media (max-width: 600px) { .radar-box { height: 400px; } }
+
+/* Traffic cameras */
+.cams { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.cam { min-width: 0; display: block; text-decoration: none; color: var(--ink); background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+.cam:hover { border-color: var(--radar); }
+.cam .shot { position: relative; aspect-ratio: 16 / 9; max-width: 100%; background: #050c16; }
+.cam img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cam .cap { padding: 10px 12px; }
+.cam .where { font: 700 17px/1.2 var(--display); letter-spacing: 0.04em; }
+.cam .road { font: 500 11px/1.4 var(--data); letter-spacing: 0.05em; color: var(--ink-dim); margin-top: 3px; }
+.cams-src { margin-top: 12px; font: 500 11px/1.4 var(--data); color: var(--ink-dim); letter-spacing: 0.04em; }
+
 /* 7-day forecast: one column per day, scrolls sideways on phones */
 .fc-wrap { overflow-x: auto; padding-bottom: 4px; }
 .fc { display: grid; grid-template-columns: repeat(7, minmax(132px, 1fr)); gap: 10px; min-width: min-content; }
@@ -213,6 +243,25 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
   </aside>
 </div>
 
+<section class="band" aria-labelledby="radar-title">
+  <h2 id="radar-title">Live Radar</h2>
+  <p class="lede">The last hour of radar, with active warnings outlined. Drag and zoom to look around. Tap a warning for details.</p>
+  <div class="radar-box">
+    <div id="radar" role="region" aria-label="Radar map"></div>
+    <div class="radar-bar">
+      <button type="button" id="radar-play" aria-label="Pause animation">Pause</button>
+      <span id="radar-time">--</span>
+    </div>
+  </div>
+</section>
+
+<section class="band" aria-labelledby="cams-title">
+  <h2 id="cams-title">Local Cameras</h2>
+  <p class="lede">Live road views across North Alabama. Pictures refresh every minute. Tap one to watch live on ALGO Traffic.</p>
+  <div class="cams" id="cams"></div>
+  <div class="cams-src">Cameras: Alabama Department of Transportation (ALGO Traffic)</div>
+</section>
+
 <section class="band" aria-labelledby="fc-title">
   <h2 id="fc-title">7-Day Forecast</h2>
   <p class="lede">Huntsville and the Tennessee Valley. Tap a day for the full forecast.</p>
@@ -276,6 +325,7 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
 
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 // NWS zones for the coverage area -- same list as local_predictor.MONITORED_ZONES.
 const ZONES = ['ALC033','ALC043','ALC049','ALC059','ALC071','ALC079','ALC077','ALC083','ALC089','ALC095','ALC103',
@@ -501,7 +551,133 @@ async function loadForecast() {
   }
 }
 
-loadPlayer(); loadAlerts(); loadConditions(); loadNews(); loadForecast();
+// ---- Radar: Iowa State Mesonet NEXRAD mosaic, 5-minute frames for the last 50 min ----
+const RADAR_FRAMES = ['m50m','m45m','m40m','m35m','m30m','m25m','m20m','m15m','m10m','m05m',''];
+let radarMap = null, radarLayers = [], radarIdx = RADAR_FRAMES.length - 1, radarTimer = null, warnLayer = null;
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function radarUrl(f) {
+  return 'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913' + (f ? '-' + f : '') + '/{z}/{x}/{y}.png';
+}
+function frameLabel(i) {
+  const mins = (RADAR_FRAMES.length - 1 - i) * 5;
+  const t = new Date(Date.now() - mins * 60000);
+  t.setMinutes(t.getMinutes() - (t.getMinutes() % 5));
+  return t.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+function showFrame(i) {
+  radarLayers.forEach((l, j) => l.setOpacity(j === i ? 0.75 : 0));
+  document.getElementById('radar-time').textContent = frameLabel(i) + (i === RADAR_FRAMES.length - 1 ? ' (latest)' : '');
+}
+function radarStep() {
+  radarIdx = (radarIdx + 1) % RADAR_FRAMES.length;
+  showFrame(radarIdx);
+  clearTimeout(radarTimer);
+  radarTimer = setTimeout(radarStep, radarIdx === RADAR_FRAMES.length - 1 ? 2000 : 500);
+}
+function setPlaying(on) {
+  const btn = document.getElementById('radar-play');
+  clearTimeout(radarTimer);
+  radarTimer = null;
+  if (on) radarTimer = setTimeout(radarStep, 500);
+  else { radarIdx = RADAR_FRAMES.length - 1; showFrame(radarIdx); }
+  btn.textContent = on ? 'Pause' : 'Play';
+  btn.setAttribute('aria-label', on ? 'Pause animation' : 'Play animation');
+}
+function buildRadarLayers() {
+  radarLayers.forEach(l => radarMap.removeLayer(l));
+  // Cache-bust per 5-minute slot so a long-open page keeps up.
+  const slot = Math.floor(Date.now() / 300000);
+  radarLayers = RADAR_FRAMES.map(f => L.tileLayer(radarUrl(f) + '?' + slot, { opacity: 0, zIndex: 5, maxNativeZoom: 10, maxZoom: 12 }).addTo(radarMap));
+  showFrame(radarIdx);
+}
+async function loadWarnings() {
+  try {
+    const r = await fetch('https://api.weather.gov/alerts/active?area=AL,TN,MS,GA,KY&status=actual', { headers: { Accept: 'application/geo+json' } });
+    if (!r.ok) throw new Error(r.status);
+    const feats = ((await r.json()).features || []).filter(f => f.geometry);
+    if (warnLayer) radarMap.removeLayer(warnLayer);
+    warnLayer = L.geoJSON(feats, {
+      style: f => {
+        const ev = f.properties.event || '', warn = /warning|emergency/i.test(ev);
+        return { color: alertColor(ev), weight: warn ? 3 : 2, opacity: warn ? 1 : 0.8, fillOpacity: warn ? 0.18 : 0.08 };
+      },
+      onEachFeature: (f, layer) => {
+        const p = f.properties;
+        const div = document.createElement('div');
+        const b = document.createElement('b'); b.textContent = p.event; b.style.color = alertColor(p.event);
+        const a = document.createElement('div'); a.textContent = p.areaDesc;
+        const u = document.createElement('div'); u.style.opacity = '0.75';
+        u.textContent = (p.ends || p.expires) ? 'Until ' + fmtTime(p.ends || p.expires) : '';
+        div.append(b, a, u);
+        layer.bindPopup(div);
+      }
+    }).addTo(radarMap);
+  } catch (e) {}
+}
+function initRadar() {
+  if (!window.L) return;
+  radarMap = L.map('radar', { zoomControl: true, scrollWheelZoom: false, attributionControl: true })
+    .setView([34.75, -86.6], 7);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 12, maxNativeZoom: 16,
+    attribution: 'Esri, HERE, Garmin, &copy; OpenStreetMap | Radar: Iowa Environmental Mesonet | Warnings: NWS'
+  }).addTo(radarMap);
+  // Labels above the radar so cities stay readable
+  radarMap.createPane('labels');
+  radarMap.getPane('labels').style.zIndex = 650;
+  radarMap.getPane('labels').style.pointerEvents = 'none';
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { pane: 'labels', maxZoom: 12 }).addTo(radarMap);
+  radarMap.on('focus', () => radarMap.scrollWheelZoom.enable());
+  radarMap.on('blur', () => radarMap.scrollWheelZoom.disable());
+  buildRadarLayers();
+  loadWarnings();
+  document.getElementById('radar-play').addEventListener('click', () => setPlaying(!radarTimer));
+  setPlaying(!reduceMotion);
+  setInterval(() => { buildRadarLayers(); loadWarnings(); }, 300000);
+}
+
+// ---- ALDOT cameras (ALGO Traffic). Their camera list has no CORS, so the
+// picks are listed here; snapshots load as plain images. ----
+const CAMS = [
+  [1944, 'Huntsville', 'I-565 at Jordan Lane'],
+  [1943, 'Madison', 'I-565 at Research Park Blvd'],
+  [1446, 'Huntsville', 'I-65 at I-565'],
+  [1450, 'Athens', 'I-65 at US 72'],
+  [1444, 'Decatur', 'US 31 Hudson Memorial Bridge'],
+  [1555, 'Florence', 'AL 133 Tennessee River Bridge'],
+  [1390, 'Hartselle', 'I-65 at AL 36'],
+  [1989, 'Albertville', 'US 431 at Portwood'],
+];
+function buildCams() {
+  const box = document.getElementById('cams');
+  CAMS.forEach(([id, where, road]) => {
+    const a = document.createElement('a');
+    a.className = 'cam'; a.href = 'https://www.algotraffic.com?cameraId=' + id; a.target = '_blank'; a.rel = 'noopener';
+    const shot = document.createElement('div'); shot.className = 'shot';
+    const img = document.createElement('img');
+    img.alt = 'Traffic camera: ' + road + ', ' + where; img.loading = 'lazy'; img.dataset.cam = id;
+    img.src = 'https://api.algotraffic.com/v4/Cameras/' + id + '/snapshot.jpg?t=' + Date.now();
+    img.onerror = () => { a.hidden = true; };
+    shot.appendChild(img);
+    const cap = document.createElement('div'); cap.className = 'cap';
+    const w = document.createElement('div'); w.className = 'where'; w.textContent = where;
+    const r = document.createElement('div'); r.className = 'road'; r.textContent = road;
+    cap.append(w, r);
+    a.append(shot, cap);
+    box.appendChild(a);
+  });
+}
+function refreshCams() {
+  document.querySelectorAll('img[data-cam]').forEach(img => {
+    const next = new Image();
+    const url = 'https://api.algotraffic.com/v4/Cameras/' + img.dataset.cam + '/snapshot.jpg?t=' + Date.now();
+    next.onload = () => { img.src = url; };
+    next.src = url;
+  });
+}
+
+loadPlayer(); loadAlerts(); loadConditions(); loadNews(); loadForecast(); initRadar(); buildCams();
+setInterval(refreshCams, 60000);
 setInterval(loadForecast, 1800000);
 setInterval(loadNews, 600000);
 setInterval(loadAlerts, 120000);
