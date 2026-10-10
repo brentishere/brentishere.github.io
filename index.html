@@ -3,7 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>NorthBamaWX</title>
+<title>NorthBamaWX | North Alabama Weather Radar, Alerts &amp; Live Stream</title>
+<link rel="canonical" href="https://northbamawx.github.io/">
+<meta name="keywords" content="North Alabama weather, Huntsville weather, Tennessee Valley weather, weather radar, tornado warning, severe weather, live weather stream">
+<meta property="og:url" content="https://northbamawx.github.io/">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+ {"@type":"WebSite","name":"NorthBamaWX","url":"https://northbamawx.github.io/",
+  "description":"Live radar, severe weather alerts, forecasts and a 24/7 weather stream for North Alabama and Southern Tennessee."},
+ {"@type":"Organization","name":"NorthBamaWX","url":"https://northbamawx.github.io/",
+  "areaServed":["North Alabama","Southern Tennessee","Huntsville, AL","Tennessee Valley"],
+  "sameAs":["https://www.youtube.com/channel/UC4nij4NgHjDJ8i5tv-1wWIA","https://www.facebook.com/NorthBamaWeather/"]}
+]}
+</script>
 <meta name="description" content="24/7 live weather coverage for North Alabama and Southern Tennessee: live radar stream, spoken severe weather alerts, and current watches and warnings.">
 <meta property="og:title" content="NorthBamaWX — 24/7 Live Weather">
 <meta property="og:description" content="Live radar and severe weather alerts for North Alabama and Southern Tennessee, around the clock.">
@@ -209,6 +222,24 @@ section.band { padding-block: 34px; border-top: 1px solid var(--rule); }
 .lsr-src { margin-top: 12px; font: 500 11px/1.4 var(--data); color: var(--ink-dim); letter-spacing: 0.04em; }
 @media (max-width: 600px) { .lsr li { grid-template-columns: minmax(0, 1fr); } }
 
+/* Right Now box */
+.now-box { margin-top: 18px; padding: 16px 18px; background: var(--panel); border: 1px solid var(--rule); border-left: 4px solid var(--radar); border-radius: 6px; }
+.now-box .lbl { font: 600 11px/1 var(--data); letter-spacing: 0.16em; text-transform: uppercase; color: var(--radar); }
+.now-box .hl { font: 700 22px/1.2 var(--display); letter-spacing: 0.02em; margin-top: 6px; }
+.now-box p { margin: 6px 0 0; font-size: 15px; max-width: 75ch; }
+.now-box .ts { margin-top: 8px; font: 500 11px/1.4 var(--data); color: var(--ink-dim); letter-spacing: 0.04em; }
+
+/* River levels */
+.rivers { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px 28px; }
+.rivers li { min-width: 0; padding: 10px 0; border-top: 1px solid var(--rule); }
+.rivers a { text-decoration: none; color: var(--ink); display: block; }
+.rivers .rn { font-weight: 600; font-size: 14px; }
+.rivers .rs { display: flex; align-items: baseline; gap: 10px; margin-top: 4px; font: 500 12px/1.3 var(--data); color: var(--ink-dim); }
+.rivers .rs b { font: 700 20px/1 var(--display); color: var(--ink); letter-spacing: 0.02em; }
+.rivers .pill { font: 700 11px/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 7px; border-radius: 3px; color: #0a1626; background: var(--pc, #4ade80); margin-left: auto; white-space: nowrap; }
+.rivers .bar { height: 5px; margin-top: 7px; background: var(--night); border-radius: 3px; overflow: hidden; }
+.rivers .bar i { display: block; height: 100%; background: var(--pc, #4ade80); }
+
 /* SPC outlook */
 .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .tabs button { all: unset; cursor: pointer; font: 700 16px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase;
@@ -335,6 +366,12 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
     </div>
     <h1>Live radar and severe weather alerts, around the clock</h1>
     <p>NorthBamaWX watches the radar for North Alabama and Southern Tennessee every minute of every day. When the National Weather Service issues a warning for our counties, the stream switches to the storm, maps the warning, and reads it out loud right away, day or night.</p>
+    <div class="now-box" id="now-box" hidden>
+      <div class="lbl">Right now</div>
+      <div class="hl" id="now-hl"></div>
+      <p id="now-text"></p>
+      <div class="ts" id="now-ts"></div>
+    </div>
     <div class="cta">
       <a class="btn primary" href="https://www.youtube.com/channel/UC4nij4NgHjDJ8i5tv-1wWIA?sub_confirmation=1" target="_blank" rel="noopener">Subscribe on YouTube</a>
       <a class="btn" href="https://www.facebook.com/NorthBamaWeather/" target="_blank" rel="noopener">Follow on Facebook</a>
@@ -411,6 +448,13 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
   <p class="lede">Damage, flooding, hail and wind reports sent to the National Weather Service from our counties in the last 48 hours. They're also marked on the Alerts Map.</p>
   <ul class="lsr" id="lsr"><li class="news-empty">Loading reports…</li></ul>
   <div class="lsr-src">Reports: National Weather Service local storm reports via Iowa Environmental Mesonet. Updated every 5 minutes.</div>
+</section>
+
+<section class="band" aria-labelledby="river-title">
+  <h2 id="river-title">River &amp; Creek Levels</h2>
+  <p class="lede">Weather service river gauges in our counties, closest to flood stage first. The bar shows how close each one is to flooding. Tap a gauge for its full forecast.</p>
+  <ul class="rivers" id="rivers"><li class="news-empty">Loading gauges…</li></ul>
+  <div class="lsr-src">Gauges: NOAA National Water Prediction Service. Updated every 10 minutes.</div>
 </section>
 
 <section class="band" aria-labelledby="radar-title">
@@ -1170,6 +1214,82 @@ async function loadTropics() {
 }
 loadTropics();
 setInterval(loadTropics, 600000);
+
+// ---- Right Now: the bot's hourly summary (now.json) ----
+async function loadNow() {
+  let d = null;
+  for (const url of ['https://raw.githubusercontent.com/northbamawx/northbamawx.github.io/main/now.json', 'now.json']) {
+    try { const r = await fetch(url + '?t=' + Date.now(), { cache: 'no-store' }); if (r.ok) { d = await r.json(); break; } } catch (e) {}
+  }
+  const box = document.getElementById('now-box');
+  if (!d || !d.summary || Date.now() / 1000 - (d.updated || 0) > 3 * 3600) { box.hidden = true; return; }
+  document.getElementById('now-hl').textContent = d.headline || '';
+  document.getElementById('now-hl').hidden = !d.headline;
+  document.getElementById('now-text').textContent = d.summary;
+  document.getElementById('now-ts').textContent = 'From the NorthBamaWX hourly update' + (d.stamp ? ', ' + d.stamp : '');
+  box.hidden = false;
+}
+loadNow();
+setInterval(loadNow, 600000);
+
+// ---- River & creek levels (NOAA NWPS) ----
+// Gauges in or along our counties. Pool-elevation gauges (dam headwater) are left out.
+const GAUGES = ['FLOA1','DECA1','WHIA1','GVDA1','SCRA1','BSBA1','WDVA1','ATNA1','BNAA1','MADA1','FRYA1','SHEA1','TONA1',
+  'CNTA1','BGWA1','RBYA1','MLBA1','FYTT1','PSPT1','PLKT1','PPLT1'];
+const FLOOD_LEVELS = [['major', 'Major flood', '#d946ef'], ['moderate', 'Moderate flood', '#ef4444'], ['minor', 'Minor flood', '#f97316'], ['action', 'Near flood', '#facc15']];
+const gaugeInfo = {};
+async function gaugeDetail(lid) {
+  if (gaugeInfo[lid]) return gaugeInfo[lid];
+  try {
+    const r = await fetch('https://api.water.noaa.gov/nwps/v1/gauges/' + lid);
+    if (!r.ok) throw new Error(r.status);
+    const d = await r.json();
+    gaugeInfo[lid] = d;
+    return d;
+  } catch (e) { return null; }
+}
+async function loadRivers() {
+  const list = document.getElementById('rivers');
+  try {
+    const details = await Promise.all(GAUGES.map(gaugeDetail));
+    const rows = details.filter(Boolean).map(d => {
+      const o = (d.status || {}).observed || {};
+      const cats = (d.flood || {}).categories || {};
+      const stage = o.primary, minor = cats.minor && cats.minor.stage > 0 ? cats.minor.stage : null;
+      let level = null;
+      for (const [k, label, color] of FLOOD_LEVELS) {
+        if (cats[k] && cats[k].stage > 0 && stage >= cats[k].stage) { level = { label, color }; break; }
+      }
+      return { lid: d.lid, name: d.name, stage, unit: o.primaryUnit || 'ft', minor, level,
+               pct: minor && stage > -999 ? stage / minor : -1, time: o.validTime, current: stage > -999 };
+    }).filter(r => r.current).sort((a, b) => b.pct - a.pct);
+    list.textContent = '';
+    rows.forEach(g => {
+      const li = document.createElement('li');
+      const color = g.level ? g.level.color : '#4ade80';
+      li.style.setProperty('--pc', color);
+      const a = document.createElement('a'); a.href = 'https://water.noaa.gov/gauges/' + g.lid.toLowerCase(); a.target = '_blank'; a.rel = 'noopener';
+      const n = document.createElement('div'); n.className = 'rn'; n.textContent = g.name.replace(/\s*\((AL|TN)\)/, '');
+      const st = document.createElement('div'); st.className = 'rs';
+      const b = document.createElement('b'); b.textContent = g.stage.toFixed(1) + ' ' + g.unit;
+      st.append(b, document.createTextNode(g.minor ? `flood stage ${g.minor} ${g.unit}` : 'no flood stage set'));
+      const pill = document.createElement('span'); pill.className = 'pill'; pill.textContent = g.level ? g.level.label : 'Normal';
+      st.appendChild(pill);
+      a.append(n, st);
+      if (g.minor) {
+        const bar = document.createElement('div'); bar.className = 'bar';
+        const fill = document.createElement('i'); fill.style.width = Math.max(2, Math.min(100, g.pct * 100)) + '%';
+        bar.appendChild(fill); a.appendChild(bar);
+      }
+      li.appendChild(a); list.appendChild(li);
+    });
+    if (!rows.length) list.innerHTML = '<li class="news-empty">River gauges are unavailable right now.</li>';
+  } catch (e) {
+    if (!list.querySelector('.rn')) list.innerHTML = '<li class="news-empty">River gauges are unavailable right now.</li>';
+  }
+}
+loadRivers();
+setInterval(() => { Object.keys(gaugeInfo).forEach(k => delete gaugeInfo[k]); loadRivers(); }, 600000);
 
 // ---- Storm reports (IEM local storm reports for NWS Huntsville + Nashville) ----
 const LSR_COUNTIES = new Set(['AL:Lauderdale','AL:Colbert','AL:Franklin','AL:Lawrence','AL:Limestone','AL:Madison','AL:Morgan',
