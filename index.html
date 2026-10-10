@@ -129,6 +129,15 @@ section.band { padding-block: 34px; border-top: 1px solid var(--rule); }
 
 .follow { display: flex; flex-wrap: wrap; gap: 12px; }
 
+.news { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 32px; }
+.news li { min-width: 0; border-top: 1px solid var(--rule); }
+.news a { display: block; padding-block: 14px; text-decoration: none; color: var(--ink); }
+.news a:hover .headline { color: var(--radar); }
+.news .headline { font: 600 17px/1.35 var(--body); text-wrap: pretty; }
+.news .meta { font: 500 11px/1.4 var(--data); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-dim); margin-top: 6px; }
+.news .meta b { color: var(--radar); font-weight: 500; }
+.news-empty { color: var(--ink-dim); }
+
 footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size: 13px; color: var(--ink-dim); display: flex; flex-direction: column; gap: 6px; }
 
 @media (max-width: 900px) {
@@ -182,6 +191,12 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
     <div class="board-foot">From the National Weather Service for our 15 counties. Updates every 2 minutes. Tap an alert for details.</div>
   </aside>
 </div>
+
+<section class="band" aria-labelledby="news-title">
+  <h2 id="news-title">National Weather News</h2>
+  <p class="lede">The latest weather headlines from around the country. Updated every 30 minutes.</p>
+  <ul class="news" id="news"><li class="news-empty">Loading headlines…</li></ul>
+</section>
 
 <section class="band">
   <h2>What the stream does</h2>
@@ -361,7 +376,40 @@ async function loadPlayer() {
   player.src = src;
 }
 
-loadPlayer(); loadAlerts(); loadConditions();
+// news.json is refreshed by a GitHub Action every 30 minutes. Read it from the
+// repo directly so a new copy shows without waiting for a Pages rebuild.
+const ago = ts => {
+  const m = Math.max(1, Math.round((Date.now() / 1000 - ts) / 60));
+  return m < 60 ? `${m} min ago` : `${Math.round(m / 60)} hr ago`;
+};
+async function loadNews() {
+  const list = document.getElementById('news');
+  let data = null;
+  for (const url of ['https://raw.githubusercontent.com/northbamawx/northbamawx.github.io/main/news.json', 'news.json']) {
+    try {
+      const r = await fetch(url + '?t=' + Date.now(), { cache: 'no-store' });
+      if (r.ok) { data = await r.json(); break; }
+    } catch (e) {}
+  }
+  if (!data || !data.items || !data.items.length) {
+    if (!list.querySelector('a')) list.innerHTML = '<li class="news-empty">Headlines are unavailable right now. Check back soon.</li>';
+    return;
+  }
+  list.textContent = '';
+  data.items.forEach(it => {
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    a.href = it.link; a.target = '_blank'; a.rel = 'noopener';
+    const h = document.createElement('div'); h.className = 'headline'; h.textContent = it.title;
+    const m = document.createElement('div'); m.className = 'meta';
+    const b = document.createElement('b'); b.textContent = it.source;
+    m.append(b, document.createTextNode(' · ' + ago(it.published)));
+    a.append(h, m); li.appendChild(a); list.appendChild(li);
+  });
+}
+
+loadPlayer(); loadAlerts(); loadConditions(); loadNews();
+setInterval(loadNews, 600000);
 setInterval(loadAlerts, 120000);
 setInterval(loadConditions, 600000);
 </script>
