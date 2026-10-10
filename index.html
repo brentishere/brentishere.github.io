@@ -142,6 +142,7 @@ section.band { padding-block: 34px; border-top: 1px solid var(--rule); }
 .storm-banner .sb-area { font-size: 14px; max-width: 70ch; }
 .storm-banner a { font: 700 15px/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; color: var(--sb, #c4161c);
   background: #fff; padding: 9px 14px; border-radius: 4px; text-decoration: none; white-space: nowrap; }
+.storm-banner[hidden], [hidden] { display: none !important; }
 .storm-banner.pulse { animation: sb-pulse 1.4s ease-in-out infinite; }
 @keyframes sb-pulse { 50% { filter: brightness(1.25); } }
 @media (prefers-reduced-motion: reduce) { .storm-banner.pulse { animation: none; } }
@@ -161,6 +162,28 @@ section.band { padding-block: 34px; border-top: 1px solid var(--rule); }
 .vid .vt { padding: 9px 10px; font-size: 13px; line-height: 1.3; }
 .vid .vt small { display: block; margin-top: 4px; font: 500 11px/1.3 var(--data); color: var(--ink-dim); letter-spacing: 0.04em; }
 .more-link { display: inline-block; margin-top: 14px; }
+
+/* Hourly chart */
+.hourly-wrap { overflow-x: auto; margin-top: 26px; border: 1px solid var(--rule); border-radius: 6px; background: var(--panel); }
+.hourly-wrap h3 { font: 700 18px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; margin: 14px 16px 0; }
+#hourly svg { display: block; min-width: 760px; width: 100%; height: auto; }
+.hourly-key { display: flex; gap: 18px; padding: 0 16px 12px; font: 500 11px/1.4 var(--data); color: var(--ink-dim); letter-spacing: 0.05em; }
+.hourly-key span::before { content: ""; display: inline-block; width: 14px; height: 3px; margin-right: 6px; vertical-align: 3px; background: var(--k); }
+
+/* Phone alerts */
+.alerts-signup { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 24px 40px; align-items: start; }
+.steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 10px; }
+.steps li { padding-left: 4px; }
+.topic-box { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.topic { font: 500 18px/1 var(--data); color: var(--radar); background: var(--night); border: 1px solid var(--rule); border-radius: 4px; padding: 10px 12px; user-select: all; }
+.copy-btn { all: unset; cursor: pointer; font: 700 14px/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 4px; color: var(--ink); }
+.copy-btn:focus-visible { outline: 2px solid var(--radar); }
+.store-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+.what-you-get { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 16px 18px; }
+.what-you-get h3 { font: 700 18px/1 var(--display); letter-spacing: 0.06em; margin: 0 0 10px; color: var(--radar); }
+.what-you-get ul { margin: 0; padding-left: 18px; color: var(--ink-dim); font-size: 14px; display: flex; flex-direction: column; gap: 4px; }
+.what-you-get p { margin: 12px 0 0; font-size: 13px; color: var(--ink-dim); }
+@media (max-width: 800px) { .alerts-signup { grid-template-columns: minmax(0, 1fr); } }
 
 /* SPC outlook */
 .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
@@ -320,6 +343,39 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
   </div>
 </section>
 
+<section class="band" aria-labelledby="push-title">
+  <h2 id="push-title">Get Alerts on Your Phone</h2>
+  <p class="lede">Free push alerts the moment a warning is issued for our counties. No account, no email, no ads.</p>
+  <div class="alerts-signup">
+    <ol class="steps">
+      <li>Install the free <strong>ntfy</strong> app.
+        <div class="store-links">
+          <a class="btn" href="https://apps.apple.com/us/app/ntfy/id1625396347" target="_blank" rel="noopener">iPhone</a>
+          <a class="btn" href="https://play.google.com/store/apps/details?id=io.heckel.ntfy" target="_blank" rel="noopener">Android</a>
+        </div>
+      </li>
+      <li>Tap <strong>+</strong> (Subscribe to topic) and enter this topic name:
+        <div class="topic-box">
+          <span class="topic" id="topic">northbamawx-alerts</span>
+          <button type="button" class="copy-btn" id="copy-topic">Copy</button>
+        </div>
+      </li>
+      <li>Tap <strong>Subscribe</strong>. That's it. On a computer you can also <a href="https://ntfy.sh/northbamawx-alerts" target="_blank" rel="noopener">open the alerts in your browser</a>.</li>
+    </ol>
+    <div class="what-you-get">
+      <h3>What you'll get</h3>
+      <ul>
+        <li>Tornado warnings and emergencies</li>
+        <li>Severe thunderstorm and flash flood warnings</li>
+        <li>Extreme wind warnings</li>
+        <li>Tornado and severe thunderstorm watches</li>
+        <li>Winter storm, ice storm and tropical warnings</li>
+      </ul>
+      <p>Only for our 15 counties in North Alabama and Southern Tennessee. Tornado warnings come through at the highest priority. Always have more than one way to get warnings, like a NOAA weather radio.</p>
+    </div>
+  </div>
+</section>
+
 <section class="band" aria-labelledby="radar-title">
   <h2 id="radar-title">Live Radar</h2>
   <p class="lede">The last hour of radar, with active warnings outlined. Drag and zoom to look around. Tap a warning for details.</p>
@@ -345,6 +401,11 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
   <div class="fc-wrap"><div class="fc" id="fc"><p class="news-empty">Loading forecast…</p></div></div>
   <div class="fc-detail" id="fc-detail"></div>
   <div class="fc-src" id="fc-src"></div>
+  <div class="hourly-wrap">
+    <h3>Next 48 Hours</h3>
+    <div id="hourly" role="img" aria-label="Hourly temperature and chance of rain for the next 48 hours"></div>
+    <div class="hourly-key"><span style="--k:#ffb454">Temperature °F</span><span style="--k:#33d6ff">Chance of rain</span></div>
+  </div>
 </section>
 
 <section class="band" aria-labelledby="spc-title">
@@ -929,6 +990,82 @@ document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click
   img.src = 'https://www.spc.noaa.gov/products/outlook/day' + d + 'otlk.png?t=' + Math.floor(Date.now() / 600000);
   img.alt = 'Storm Prediction Center Day ' + d + ' convective outlook map';
 }));
+
+// ---- Copy ntfy topic ----
+document.getElementById('copy-topic').addEventListener('click', e => {
+  const btn = e.currentTarget, text = document.getElementById('topic').textContent;
+  const done = () => { btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = 'Copy'; }, 2000); };
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, () => window.getSelection().selectAllChildren(document.getElementById('topic')));
+  else window.getSelection().selectAllChildren(document.getElementById('topic'));
+});
+
+// ---- Hourly chart: 48 h of temperature (line) and rain chance (bars) ----
+async function loadHourly() {
+  const box = document.getElementById('hourly');
+  try {
+    const r = await fetch(FORECAST_URL + '/hourly', { headers: { Accept: 'application/geo+json' } });
+    if (!r.ok) throw new Error(r.status);
+    const hrs = (await r.json()).properties.periods.slice(0, 48);
+    const W = 1100, H = 260, L = 44, R = 44, T = 24, B = 46;
+    const iw = W - L - R, ih = H - T - B, n = hrs.length, step = iw / n;
+    const temps = hrs.map(h => h.temperature);
+    let lo = Math.floor((Math.min(...temps) - 3) / 5) * 5, hi = Math.ceil((Math.max(...temps) + 3) / 5) * 5;
+    const y = t => T + ih - (t - lo) / (hi - lo) * ih;
+    const x = i => L + step * i + step / 2;
+    const NS = 'http://www.w3.org/2000/svg';
+    const el = (tag, attrs, text) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; };
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: 'none' });
+    // night shading
+    hrs.forEach((h, i) => { if (!h.isDaytime) svg.appendChild(el('rect', { x: L + step * i, y: T, width: step + 0.5, height: ih, fill: 'rgba(0,0,0,0.22)' })); });
+    // grid + left axis (temperature)
+    for (let t = lo; t <= hi; t += 5) {
+      svg.appendChild(el('line', { x1: L, x2: W - R, y1: y(t), y2: y(t), stroke: '#1f3a5c', 'stroke-width': 1 }));
+      svg.appendChild(el('text', { x: L - 8, y: y(t) + 4, 'text-anchor': 'end', fill: '#93a8c2', 'font-size': 11, 'font-family': 'JetBrains Mono, monospace' }, t + '°'));
+    }
+    // right axis (rain %)
+    [0, 50, 100].forEach(pc => svg.appendChild(el('text', { x: W - R + 8, y: T + ih - pc / 100 * ih + 4, fill: '#33d6ff', 'font-size': 11, 'font-family': 'JetBrains Mono, monospace' }, pc + '%')));
+    // rain bars
+    hrs.forEach((h, i) => {
+      const pc = (h.probabilityOfPrecipitation && h.probabilityOfPrecipitation.value) || 0;
+      if (pc > 0) svg.appendChild(el('rect', { x: L + step * i + 2, y: T + ih - pc / 100 * ih, width: Math.max(1, step - 4), height: pc / 100 * ih, fill: 'rgba(51,214,255,0.35)' }));
+    });
+    // temperature line + area
+    const pts = hrs.map((h, i) => `${x(i)},${y(h.temperature)}`).join(' ');
+    svg.appendChild(el('polygon', { points: `${x(0)},${T + ih} ${pts} ${x(n - 1)},${T + ih}`, fill: 'rgba(255,180,84,0.10)' }));
+    svg.appendChild(el('polyline', { points: pts, fill: 'none', stroke: '#ffb454', 'stroke-width': 2.5, 'stroke-linejoin': 'round' }));
+    // Label only each calendar day's high and low (first occurrence).
+    const marks = new Set(), byDay = {};
+    hrs.forEach((h, i) => { const k = h.startTime.slice(0, 10); (byDay[k] = byDay[k] || []).push(i); });
+    Object.values(byDay).forEach(idx => {
+      if (idx.length < 6) return;
+      let mx = idx[0], mn = idx[0];
+      idx.forEach(i => { if (hrs[i].temperature > hrs[mx].temperature) mx = i; if (hrs[i].temperature < hrs[mn].temperature) mn = i; });
+      marks.add(mx); marks.add(mn);
+    });
+    // labels: every 3 hours, plus the daily high/low temperatures
+    hrs.forEach((h, i) => {
+      const d = new Date(h.startTime);
+      if (i % 3 === 0) {
+        const hr = d.toLocaleTimeString('en-US', { hour: 'numeric' }).replace(' ', '').toLowerCase();
+        svg.appendChild(el('text', { x: x(i), y: H - 26, 'text-anchor': 'middle', fill: '#93a8c2', 'font-size': 11, 'font-family': 'JetBrains Mono, monospace' }, hr));
+      }
+      if (d.getHours() === 0 || i === 0) {
+        svg.appendChild(el('text', { x: x(i), y: H - 8, 'text-anchor': i === 0 ? 'start' : 'middle', fill: '#e8f0fa', 'font-size': 12, 'font-weight': 600, 'font-family': 'IBM Plex Sans, sans-serif' },
+          d.toLocaleDateString('en-US', { weekday: 'short' })));
+      }
+      if (i === 0 || marks.has(i)) {
+        svg.appendChild(el('circle', { cx: x(i), cy: y(h.temperature), r: 3.5, fill: '#ffb454' }));
+        svg.appendChild(el('text', { x: x(i), y: y(h.temperature) - 9, 'text-anchor': 'middle', fill: '#ffb454', 'font-size': 12, 'font-weight': 700, 'font-family': 'IBM Plex Sans, sans-serif' }, h.temperature + '°'));
+      }
+    });
+    box.textContent = '';
+    box.appendChild(svg);
+  } catch (e) {
+    if (!box.firstChild) box.innerHTML = '<p class="news-empty" style="padding:0 16px">The hourly forecast is unavailable right now.</p>';
+  }
+}
+loadHourly();
+setInterval(loadHourly, 1800000);
 
 loadVideos();
 setInterval(loadVideos, 600000);
