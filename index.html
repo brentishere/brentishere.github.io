@@ -487,6 +487,22 @@ const ZONES = ['ALC033','ALC043','ALC049','ALC059','ALC071','ALC079','ALC077','A
   'ALZ001','ALZ002','ALZ003','ALZ004','ALZ005','ALZ006','ALZ007','ALZ008','ALZ009','ALZ010','ALZ016',
   'TNC051','TNC055','TNC103','TNC127','TNZ076','TNZ095','TNZ096','TNZ097'];
 
+// Zone/county code -> name. Alerts like NWS Nashville's Wind Advisory cover
+// dozens of Middle Tennessee counties; only ours are listed.
+const ZONE_NAMES = {
+  ALC077: 'Lauderdale', ALZ001: 'Lauderdale', ALC033: 'Colbert', ALZ002: 'Colbert', ALC059: 'Franklin', ALZ003: 'Franklin',
+  ALC079: 'Lawrence', ALZ004: 'Lawrence', ALC083: 'Limestone', ALZ005: 'Limestone', ALC089: 'Madison', ALZ006: 'Madison',
+  ALC103: 'Morgan', ALZ007: 'Morgan', ALC095: 'Marshall', ALZ008: 'Marshall', ALC071: 'Jackson', ALZ009: 'Jackson',
+  ALC049: 'DeKalb', ALZ010: 'DeKalb', ALC043: 'Cullman', ALZ016: 'Cullman',
+  TNC127: 'Moore, TN', TNZ076: 'Moore, TN', TNC055: 'Giles, TN', TNZ095: 'Giles, TN',
+  TNC103: 'Lincoln, TN', TNZ096: 'Lincoln, TN', TNC051: 'Franklin, TN', TNZ097: 'Franklin, TN',
+};
+function ourAreas(p) {
+  const ugc = ((p.geocode || {}).UGC) || [];
+  const names = [...new Set(ugc.map(c => ZONE_NAMES[c]).filter(Boolean))];
+  return names.length ? names.join(', ') : (p.areaDesc || '');
+}
+
 // Same colors the stream's map uses.
 function alertColor(ev) {
   const e = ev.toLowerCase();
@@ -554,7 +570,7 @@ async function loadAlerts() {
       const btn = document.createElement('button');
       btn.setAttribute('aria-expanded', 'false');
       const ev = document.createElement('div'); ev.className = 'ev'; ev.textContent = p.event;
-      const area = document.createElement('div'); area.className = 'area'; area.textContent = p.areaDesc;
+      const area = document.createElement('div'); area.className = 'area'; area.textContent = ourAreas(p);
       const until = document.createElement('div'); until.className = 'until';
       until.textContent = (p.ends || p.expires) ? 'Until ' + fmtTime(p.ends || p.expires) : '';
       btn.append(ev, area, until);
@@ -927,7 +943,7 @@ function updateStormBanner() {
   if (!hit) { el.hidden = true; return; }
   const ev = hit.list[0].event;
   document.getElementById('sb-ev').textContent = (hit.list.length > 1 ? hit.list.length + ' ' + ev + 's' : ev) + ' in effect';
-  const areas = [...new Set(hit.list.flatMap(p => (p.areaDesc || '').split(';').map(a => a.trim()).filter(Boolean)))];
+  const areas = [...new Set(hit.list.flatMap(p => ourAreas(p).split(', ').filter(Boolean)))];
   document.getElementById('sb-area').textContent = areas.slice(0, 8).join(', ') + (areas.length > 8 ? ' and more' : '');
   el.style.setProperty('--sb', hit.color);
   el.classList.toggle('pulse', hit.pulse);
