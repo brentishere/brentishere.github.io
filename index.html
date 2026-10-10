@@ -185,6 +185,30 @@ section.band { padding-block: 34px; border-top: 1px solid var(--rule); }
 .what-you-get p { margin: 12px 0 0; font-size: 13px; color: var(--ink-dim); }
 @media (max-width: 800px) { .alerts-signup { grid-template-columns: minmax(0, 1fr); } }
 
+/* Tropics (only shown while a storm is near) */
+.storm-card { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 20px 28px; background: var(--panel);
+  border: 1px solid var(--rule); border-left: 6px solid #ff4fa3; border-radius: 6px; padding: 18px; }
+.storm-card + .storm-card { margin-top: 16px; }
+.storm-card h3 { font: 800 30px/1 var(--display); letter-spacing: 0.03em; margin: 0; }
+.storm-card .lab { font: 700 15px/1 var(--display); letter-spacing: 0.12em; text-transform: uppercase; color: #ff4fa3; margin-bottom: 6px; }
+.storm-stats { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 12px 0; font: 500 13px/1.4 var(--data); color: var(--ink-dim); }
+.storm-stats b { display: block; font: 700 22px/1.1 var(--display); color: var(--ink); letter-spacing: 0.02em; }
+.storm-card p { margin: 10px 0 0; font-size: 14px; color: var(--ink); }
+.storm-card p strong { color: #ff4fa3; font-weight: 600; }
+.storm-card img { width: 100%; max-width: 100%; height: auto; border-radius: 4px; border: 1px solid var(--rule); background: #fff; }
+.storm-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+@media (max-width: 800px) { .storm-card { grid-template-columns: minmax(0, 1fr); } }
+
+/* Storm reports */
+.lsr { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.lsr li { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 4px 18px; padding: 12px 0; border-top: 1px solid var(--rule); }
+.lsr .type { font: 700 15px/1.2 var(--display); letter-spacing: 0.06em; text-transform: uppercase; color: var(--c, var(--ink)); }
+.lsr .when { font: 500 11px/1.4 var(--data); color: var(--ink-dim); letter-spacing: 0.04em; margin-top: 4px; }
+.lsr .place { font-weight: 600; }
+.lsr .remark { font-size: 14px; color: var(--ink-dim); margin-top: 2px; }
+.lsr-src { margin-top: 12px; font: 500 11px/1.4 var(--data); color: var(--ink-dim); letter-spacing: 0.04em; }
+@media (max-width: 600px) { .lsr li { grid-template-columns: minmax(0, 1fr); } }
+
 /* SPC outlook */
 .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .tabs button { all: unset; cursor: pointer; font: 700 16px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase;
@@ -327,6 +351,12 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
   </aside>
 </div>
 
+<section class="band" aria-labelledby="trop-title" id="tropics" hidden>
+  <h2 id="trop-title">Tropics</h2>
+  <p class="lede">A tropical system is close enough to affect our area. Updated from the National Hurricane Center and nearby weather stations.</p>
+  <div id="trop-list"></div>
+</section>
+
 <section class="band" aria-labelledby="vids-title">
   <h2 id="vids-title">Latest Videos</h2>
   <p class="lede">Warning clips, daily forecasts and storm recaps from the stream. Tap one to play it here.</p>
@@ -374,6 +404,13 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
       <p>Only for our 15 counties in North Alabama and Southern Tennessee. Tornado warnings come through at the highest priority. Always have more than one way to get warnings, like a NOAA weather radio.</p>
     </div>
   </div>
+</section>
+
+<section class="band" aria-labelledby="lsr-title">
+  <h2 id="lsr-title">Storm Reports</h2>
+  <p class="lede">Damage, flooding, hail and wind reports sent to the National Weather Service from our counties in the last 48 hours. They're also marked on the Alerts Map.</p>
+  <ul class="lsr" id="lsr"><li class="news-empty">Loading reports…</li></ul>
+  <div class="lsr-src">Reports: National Weather Service local storm reports via Iowa Environmental Mesonet. Updated every 5 minutes.</div>
 </section>
 
 <section class="band" aria-labelledby="radar-title">
@@ -923,6 +960,7 @@ async function initAlertMap() {
     window.addEventListener('resize', () => amap.fitBounds(countyLayer.getBounds(), { padding: [16, 16] }));
     countiesReady = true;
     updateAlertMap();
+    if (typeof loadReports === 'function') loadReports();   // put report dots on the map now
   } catch (e) {}
 }
 
@@ -1082,6 +1120,116 @@ async function loadHourly() {
 }
 loadHourly();
 setInterval(loadHourly, 1800000);
+
+// ---- Tropics: tropics.json is written by the bot (hurricane_monitor) ----
+async function loadTropics() {
+  const sec = document.getElementById('tropics'), box = document.getElementById('trop-list');
+  let data = null;
+  for (const url of ['https://raw.githubusercontent.com/northbamawx/northbamawx.github.io/main/tropics.json', 'tropics.json']) {
+    try { const r = await fetch(url + '?t=' + Date.now(), { cache: 'no-store' }); if (r.ok) { data = await r.json(); break; } } catch (e) {}
+  }
+  const storms = (data && data.storms) || [];
+  // Ignore a stale file (bot offline for a day or more).
+  if (!storms.length || Date.now() / 1000 - (data.updated || 0) > 36 * 3600) { sec.hidden = true; return; }
+  box.textContent = '';
+  storms.forEach(st => {
+    const card = document.createElement('div'); card.className = 'storm-card';
+    const left = document.createElement('div');
+    const lab = document.createElement('div'); lab.className = 'lab'; lab.textContent = st.label;
+    const h = document.createElement('h3'); h.textContent = st.name;
+    const stats = document.createElement('div'); stats.className = 'storm-stats';
+    const stat = (v, k) => { const d = document.createElement('div'); const b = document.createElement('b'); b.textContent = v; d.append(b, document.createTextNode(k)); stats.appendChild(d); };
+    stat(st.wind_mph + ' mph', 'max winds');
+    if (st.movement) stat(st.movement, 'moving');
+    stat(st.dist_to_al + ' mi', 'from Huntsville');
+    left.append(lab, h, stats);
+    const where = st.over_land ? 'Over land' + (st.near ? ' near ' + st.near : '') :
+      st.near ? `${st.near_mi} miles from ${st.near}` : '';
+    if (where) { const p = document.createElement('p'); p.textContent = where + (st.in_gulf ? ', in the Gulf' : '') + '.'; left.appendChild(p); }
+    if (st.headline) { const p = document.createElement('p'); p.textContent = st.headline; left.appendChild(p); }
+    [['winds', 'Observed winds'], ['surge', 'Storm surge'], ['damage', 'Damage reports']].forEach(([k, t]) => {
+      if (!st[k]) return;
+      const p = document.createElement('p'); const s2 = document.createElement('strong'); s2.textContent = t + ': ';
+      p.append(s2, document.createTextNode(st[k].replace(/^[^:]*:\s*/, '')));
+      left.appendChild(p);
+    });
+    const links = document.createElement('div'); links.className = 'storm-links';
+    if (st.advisory_url) { const a = document.createElement('a'); a.className = 'btn'; a.href = st.advisory_url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'NHC advisory'; links.appendChild(a); }
+    if (st.graphics_url) { const a = document.createElement('a'); a.className = 'btn'; a.href = st.graphics_url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'All NHC maps'; links.appendChild(a); }
+    left.appendChild(links);
+    card.appendChild(left);
+    if (st.cone_url) {
+      const right = document.createElement('div');
+      const img = document.createElement('img'); img.src = st.cone_url; img.alt = 'Forecast cone for ' + st.name; img.loading = 'lazy';
+      img.onerror = () => right.remove();
+      right.appendChild(img); card.appendChild(right);
+    }
+    box.appendChild(card);
+  });
+  sec.hidden = false;
+}
+loadTropics();
+setInterval(loadTropics, 600000);
+
+// ---- Storm reports (IEM local storm reports for NWS Huntsville + Nashville) ----
+const LSR_COUNTIES = new Set(['AL:Lauderdale','AL:Colbert','AL:Franklin','AL:Lawrence','AL:Limestone','AL:Madison','AL:Morgan',
+  'AL:Marshall','AL:Jackson','AL:DeKalb','AL:Cullman','TN:Moore','TN:Giles','TN:Lincoln','TN:Franklin']);
+const LSR_TYPES = [[/tornado|funnel/i, '#FF2B2B', 'Tornado'], [/hail/i, '#22c3ff', 'Hail'], [/flood|rain/i, '#22e05a', 'Flooding'],
+  [/wnd|wind|gust/i, '#FFA500', 'Wind'], [/snow|ice|sleet|freez/i, '#b9a7ff', 'Winter'], [/./, '#DAA520', 'Report']];
+let lsrLayer = null, lsrShowAll = false;
+function lsrStyle(t) { return LSR_TYPES.find(([re]) => re.test(t || '')); }
+async function loadReports() {
+  const list = document.getElementById('lsr');
+  try {
+    const r = await fetch('https://mesonet.agron.iastate.edu/geojson/lsr.php?wfos=HUN,OHX&hours=48');
+    if (!r.ok) throw new Error(r.status);
+    const feats = ((await r.json()).features || []).filter(f => LSR_COUNTIES.has((f.properties.st || '') + ':' + (f.properties.county || '')))
+      .sort((a, b) => (b.properties.valid || '').localeCompare(a.properties.valid || ''));
+    list.textContent = '';
+    if (!feats.length) { list.innerHTML = '<li class="news-empty">No storm reports from our counties in the last 48 hours.</li>'; }
+    feats.slice(0, 40).forEach((f, i) => {
+      const p = f.properties, [, color, label] = lsrStyle(p.typetext);
+      const li = document.createElement('li'); li.style.setProperty('--c', color);
+      const a = document.createElement('div');
+      const t = document.createElement('div'); t.className = 'type';
+      t.textContent = label + (p.magnitude ? ` ${p.magnitude}${p.unit ? ' ' + p.unit.toLowerCase() : ''}` : '');
+      const w = document.createElement('div'); w.className = 'when';
+      w.textContent = new Date(p.valid).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+      a.append(t, w);
+      const b = document.createElement('div');
+      const pl = document.createElement('div'); pl.className = 'place';
+      pl.textContent = `${p.city || ''}, ${p.county} County${p.st === 'TN' ? ', TN' : ''}`;
+      const rm = document.createElement('div'); rm.className = 'remark';
+      rm.textContent = (p.remark || (p.typetext || '').toLowerCase()) + (p.source ? ` (${p.source})` : '');
+      b.append(pl, rm);
+      li.append(a, b); li.hidden = i >= 10 && !lsrShowAll; list.appendChild(li);
+    });
+    if (feats.length > 10 && !lsrShowAll) {
+      const li = document.createElement('li'); li.className = 'news-empty';
+      const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'copy-btn';
+      btn.textContent = `Show all ${Math.min(feats.length, 40)} reports`;
+      btn.addEventListener('click', () => { lsrShowAll = true; list.querySelectorAll('li[hidden]').forEach(x => { x.hidden = false; }); li.remove(); });
+      li.appendChild(btn); list.appendChild(li);
+    }
+    // Dots on the Alerts Map
+    if (amap && window.L) {
+      if (lsrLayer) amap.removeLayer(lsrLayer);
+      lsrLayer = L.layerGroup(feats.map(f => {
+        const p = f.properties, [, color, label] = lsrStyle(p.typetext);
+        const [lon, lat] = f.geometry.coordinates;
+        const div = document.createElement('div');
+        const b = document.createElement('b'); b.textContent = label; b.style.color = color;
+        const d = document.createElement('div'); d.textContent = (p.city || '') + ': ' + (p.remark || p.typetext || '');
+        div.append(b, d);
+        return L.circleMarker([lat, lon], { radius: 6, color: '#0a1626', weight: 1.5, fillColor: color, fillOpacity: 1 }).bindPopup(div);
+      })).addTo(amap);
+    }
+  } catch (e) {
+    if (!list.querySelector('.place')) list.innerHTML = '<li class="news-empty">Storm reports are unavailable right now.</li>';
+  }
+}
+loadReports();
+setInterval(loadReports, 300000);
 
 loadVideos();
 setInterval(loadVideos, 600000);
