@@ -130,6 +130,19 @@ section.band { padding-block: 34px; border-top: 1px solid var(--rule); }
 
 .follow { display: flex; flex-wrap: wrap; gap: 12px; }
 
+/* County alerts map */
+.amap-box { position: relative; height: 520px; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: #0d1b2e; }
+#amap { position: absolute; inset: 0; background: #0d1b2e; }
+.amap-legend {
+  position: absolute; right: 12px; top: 12px; z-index: 500; display: flex; flex-direction: column; gap: 6px;
+  background: rgba(10,22,38,0.9); border: 1px solid var(--rule); border-radius: 4px; padding: 10px 12px; max-width: 60%;
+}
+.amap-legend .t { font: 700 15px/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; }
+.amap-legend .row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.amap-legend .sw { width: 14px; height: 14px; border-radius: 2px; flex: none; border: 1px solid rgba(255,255,255,0.5); }
+.county-label { font: 700 13px/1 var(--display); letter-spacing: 0.04em; color: #fff; text-shadow: 0 0 3px #000, 0 0 6px #000; text-align: center; white-space: nowrap; }
+@media (max-width: 600px) { .amap-box { height: 420px; } .county-label { font-size: 11px; } }
+
 /* Radar map */
 .radar-box { position: relative; height: 540px; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: #050c16; }
 #radar { position: absolute; inset: 0; }
@@ -242,6 +255,15 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
     <div class="board-foot">From the National Weather Service for our 15 counties. Updates every 2 minutes. Tap an alert for details.</div>
   </aside>
 </div>
+
+<section class="band" aria-labelledby="amap-title">
+  <h2 id="amap-title">Alerts Map</h2>
+  <p class="lede">Our 15 counties, shaded by the most serious watch or advisory in effect. Warnings are drawn as outlines. Tap a county for details.</p>
+  <div class="amap-box">
+    <div id="amap" role="region" aria-label="County alerts map"></div>
+    <div class="amap-legend" id="amap-legend"></div>
+  </div>
+</section>
 
 <section class="band" aria-labelledby="radar-title">
   <h2 id="radar-title">Live Radar</h2>
@@ -374,12 +396,16 @@ async function loadAlerts() {
     if (!r.ok) throw new Error(r.status);
     const data = await r.json();
     const seen = new Set();
-    const alerts = (data.features || []).map(f => f.properties).filter(p => {
+    const alerts = (data.features || []).filter(f => {
+      const p = f.properties;
       if (!p || p.status !== 'Actual' || seen.has(p.id)) return false;
       seen.add(p.id);
       return true;
-    }).sort((a, b) => rank(a.event) - rank(b.event) || a.event.localeCompare(b.event));
+    }).map(f => Object.assign({}, f.properties, { _geometry: f.geometry }))
+      .sort((a, b) => rank(a.event) - rank(b.event) || a.event.localeCompare(b.event));
 
+    areaAlerts = alerts;
+    updateAlertMap();
     list.textContent = '';
     if (!alerts.length) {
       const li = document.createElement('li');
@@ -676,7 +702,81 @@ function refreshCams() {
   });
 }
 
-loadPlayer(); loadAlerts(); loadConditions(); loadNews(); loadForecast(); initRadar(); buildCams();
+// ---- County alerts map (same idea as the stream's Weather Alerts scene) ----
+let areaAlerts = [], amap = null, countyLayer = null, warnPolys = null, countiesReady = false;
+const POLYGON_EVENTS = /tornado warning|tornado emergency|severe thunderstorm warning|extreme wind warning|flash flood warning|flash flood emergency|special weather statement/i;
+function alertCoversCounty(p, props) {
+  const ugc = ((p.geocode || {}).UGC) || [];
+  return ugc.includes(props.zone) || ugc.includes(props.county);
+}
+function countyAlerts(props) {
+  return areaAlerts.filter(p => !POLYGON_EVENTS.test(p.event) && alertCoversCounty(p, props))
+    .sort((a, b) => rank(a.event) - rank(b.event));
+}
+function updateAlertMap() {
+  if (!amap || !countiesReady) return;
+  countyLayer.eachLayer(l => {
+    const top = countyAlerts(l.feature.properties)[0];
+    l.setStyle(top ? { fillColor: alertColor(top.event), fillOpacity: 0.7 } : { fillColor: '#4a5a70', fillOpacity: 0.55 });
+  });
+  if (warnPolys) amap.removeLayer(warnPolys);
+  const polys = areaAlerts.filter(p => POLYGON_EVENTS.test(p.event) && p._geometry)
+    .map(p => ({ type: 'Feature', geometry: p._geometry, properties: p }));
+  warnPolys = L.geoJSON(polys, {
+    style: f => ({ color: alertColor(f.properties.event), weight: 3, opacity: 1, fillColor: alertColor(f.properties.event), fillOpacity: 0.35 }),
+    onEachFeature: (f, layer) => layer.bindPopup(alertPopup([f.properties]))
+  }).addTo(amap);
+  const legend = document.getElementById('amap-legend');
+  legend.textContent = '';
+  const t = document.createElement('div'); t.className = 't'; t.textContent = 'Active Alerts'; legend.appendChild(t);
+  const events = [...new Set(areaAlerts.map(p => p.event))];
+  if (!events.length) {
+    const r = document.createElement('div'); r.className = 'row'; r.textContent = 'None right now'; legend.appendChild(r);
+  }
+  events.forEach(ev => {
+    const r = document.createElement('div'); r.className = 'row';
+    const sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = alertColor(ev);
+    r.append(sw, document.createTextNode(ev)); legend.appendChild(r);
+  });
+}
+function alertPopup(list) {
+  const div = document.createElement('div');
+  if (!list.length) { div.textContent = 'No alerts for this county.'; return div; }
+  list.forEach(p => {
+    const b = document.createElement('b'); b.textContent = p.event; b.style.color = alertColor(p.event); b.style.display = 'block';
+    const u = document.createElement('div'); u.style.opacity = '0.75'; u.style.marginBottom = '6px';
+    u.textContent = (p.ends || p.expires) ? 'Until ' + fmtTime(p.ends || p.expires) : '';
+    div.append(b, u);
+  });
+  return div;
+}
+async function initAlertMap() {
+  if (!window.L) return;
+  amap = L.map('amap', { zoomControl: false, scrollWheelZoom: false, dragging: !L.Browser.mobile, attributionControl: false, zoomSnap: 0.25 });
+  try {
+    const gj = await (await fetch('counties.geojson')).json();
+    countyLayer = L.geoJSON(gj, {
+      style: { color: '#0a1626', weight: 2, fillColor: '#4a5a70', fillOpacity: 0.55 },
+      onEachFeature: (f, layer) => {
+        layer.bindPopup(() => {
+          const d = alertPopup(countyAlerts(f.properties));
+          const h = document.createElement('div');
+          h.textContent = f.properties.name + ' County, ' + f.properties.state;
+          h.style.cssText = 'font-weight:600;margin-bottom:6px';
+          d.prepend(h);
+          return d;
+        });
+        L.marker(layer.getBounds().getCenter(), { interactive: false, icon: L.divIcon({ className: 'county-label', html: f.properties.name, iconSize: [100, 16] }) }).addTo(amap);
+      }
+    }).addTo(amap);
+    amap.fitBounds(countyLayer.getBounds(), { padding: [16, 16] });
+    window.addEventListener('resize', () => amap.fitBounds(countyLayer.getBounds(), { padding: [16, 16] }));
+    countiesReady = true;
+    updateAlertMap();
+  } catch (e) {}
+}
+
+initAlertMap(); loadPlayer(); loadAlerts(); loadConditions(); loadNews(); loadForecast(); initRadar(); buildCams();
 setInterval(refreshCams, 60000);
 setInterval(loadForecast, 1800000);
 setInterval(loadNews, 600000);
