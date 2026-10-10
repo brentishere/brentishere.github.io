@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NorthBamaWX</title>
+<meta name="description" content="24/7 live weather coverage for North Alabama and Southern Tennessee: live radar stream, spoken severe weather alerts, and current watches and warnings.">
+<meta property="og:title" content="NorthBamaWX — 24/7 Live Weather">
+<meta property="og:description" content="Live radar and severe weather alerts for North Alabama and Southern Tennessee, around the clock.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0a1626">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230a1626'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='%2333d6ff' stroke-width='4'/%3E%3Cpath d='M32 32 L46 18' stroke='%2333d6ff' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: broadcast control-room — stream as the big monitor, alert board beside it, then coverage and follow strips. */
+:root {
+  --night: #0a1626;        /* page ground, matches the stream's header bar */
+  --panel: #10223a;        /* raised panels */
+  --rule: #1f3a5c;         /* hairlines and borders */
+  --ink: #e8f0fa;          /* primary text */
+  --ink-dim: #93a8c2;      /* secondary text */
+  --radar: #33d6ff;        /* brand accent, the stream's cyan */
+  --live: #ff3b3b;         /* LIVE indicator */
+  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --data: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--night);
+  color: var(--ink);
+  font: 16px/1.55 var(--body);
+  padding-inline: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--radar); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--radar); outline-offset: 3px; }
+.wrap { max-width: 1240px; margin: 0 auto; }
+
+/* Masthead */
+header {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding-block: 20px 18px;
+  border-bottom: 1px solid var(--rule);
+}
+.brand { font: 800 30px/1 var(--display); letter-spacing: 0.06em; text-decoration: none; color: var(--ink); }
+.brand b { color: var(--radar); font-weight: 800; }
+.tag { font: 500 12px/1 var(--data); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-dim); }
+.live-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  font: 700 15px/1 var(--display); letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink); text-decoration: none;
+  border: 1px solid var(--live); border-radius: 999px; padding: 8px 14px;
+}
+.live-pill::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--live); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.25; } }
+
+/* Conditions strip */
+.wx-strip {
+  display: flex; flex-wrap: wrap; gap: 8px 28px; align-items: baseline;
+  padding-block: 14px;
+  font: 500 13px/1.4 var(--data); color: var(--ink-dim);
+  border-bottom: 1px solid var(--rule);
+}
+.wx-strip strong { color: var(--ink); font-weight: 500; }
+.wx-strip .temp { font: 700 28px/1 var(--display); color: var(--ink); letter-spacing: 0.02em; }
+
+/* Main monitor + alert board */
+.console {
+  display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px;
+  padding-block: 28px;
+}
+.monitor { min-width: 0; }
+.screen {
+  position: relative; width: 100%; max-width: 100%; aspect-ratio: 16 / 9;
+  background: #050c16; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden;
+}
+.screen iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.monitor h1 {
+  font: 700 clamp(30px, 4.4vw, 48px)/1.05 var(--display); letter-spacing: 0.01em;
+  margin: 22px 0 10px; text-wrap: balance;
+}
+.monitor p { margin: 0; max-width: 62ch; color: var(--ink-dim); }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  font: 700 17px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none;
+  padding: 13px 20px; border-radius: 4px; border: 1px solid var(--rule); color: var(--ink); background: var(--panel);
+}
+.btn.primary { background: var(--radar); border-color: var(--radar); color: var(--night); }
+.btn:hover { filter: brightness(1.12); }
+
+.board { min-width: 0; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; display: flex; flex-direction: column; }
+.board-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 16px 18px 12px; border-bottom: 1px solid var(--rule); }
+.board-head h2 { font: 700 20px/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; margin: 0; }
+.board-head span { font: 500 11px/1 var(--data); color: var(--ink-dim); letter-spacing: 0.06em; }
+#alerts { list-style: none; margin: 0; padding: 8px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; max-height: 560px; }
+.alert { border-left: 6px solid var(--c, #8a99ad); background: rgba(255,255,255,0.03); border-radius: 3px; }
+.alert button {
+  all: unset; box-sizing: border-box; cursor: pointer; display: block; width: 100%; padding: 10px 12px;
+}
+.alert .ev { font: 700 18px/1.15 var(--display); letter-spacing: 0.03em; color: var(--c, var(--ink)); }
+.alert .area { font-size: 13px; color: var(--ink); margin-top: 3px; }
+.alert .until { font: 500 11px/1.3 var(--data); color: var(--ink-dim); margin-top: 5px; letter-spacing: 0.04em; }
+.alert .desc { display: none; padding: 0 12px 12px; font-size: 13px; color: var(--ink-dim); white-space: pre-line; }
+.alert.open .desc { display: block; }
+.board-empty { padding: 26px 18px; color: var(--ink-dim); font-size: 14px; }
+.board-empty strong { display: block; font: 700 20px/1.1 var(--display); color: #4ade80; letter-spacing: 0.05em; margin-bottom: 6px; text-transform: uppercase; }
+.board-foot { margin-top: auto; padding: 12px 18px; border-top: 1px solid var(--rule); font-size: 12px; color: var(--ink-dim); }
+
+/* Sections */
+section.band { padding-block: 34px; border-top: 1px solid var(--rule); }
+.band h2 { font: 700 26px/1.1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 6px; }
+.band .lede { color: var(--ink-dim); margin: 0 0 22px; max-width: 62ch; }
+.features { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 22px 32px; }
+.feature { min-width: 0; }
+.feature h3 { font: 700 19px/1.2 var(--display); letter-spacing: 0.04em; margin: 0 0 4px; color: var(--radar); }
+.feature p { margin: 0; color: var(--ink-dim); font-size: 15px; }
+
+.counties { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+.state h3 { font: 600 12px/1 var(--data); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-dim); margin: 0 0 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.chips li { font: 600 17px/1 var(--display); letter-spacing: 0.04em; padding: 8px 12px; border: 1px solid var(--rule); border-radius: 3px; background: var(--panel); }
+.chips li small { font: 500 11px/1 var(--data); color: var(--ink-dim); margin-left: 6px; letter-spacing: 0; }
+
+.follow { display: flex; flex-wrap: wrap; gap: 12px; }
+
+footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size: 13px; color: var(--ink-dim); display: flex; flex-direction: column; gap: 6px; }
+
+@media (max-width: 900px) {
+  .console { grid-template-columns: minmax(0, 1fr); }
+  #alerts { max-height: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-pill::before { animation: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <a class="brand" href="./">NORTH<b>BAMA</b>WX</a>
+    <div class="tag" style="margin-top:6px">Live weather intelligence · North Alabama &amp; Southern Tennessee</div>
+  </div>
+  <a class="live-pill" href="https://www.youtube.com/channel/UC4nij4NgHjDJ8i5tv-1wWIA/live" target="_blank" rel="noopener">Live 24/7</a>
+</header>
+
+<div class="wx-strip" id="wx" aria-live="polite">
+  <span class="temp" id="wx-temp">--°</span>
+  <span><strong>Huntsville</strong> <span id="wx-desc">Loading current conditions…</span></span>
+  <span>Wind <strong id="wx-wind">--</strong></span>
+  <span>Humidity <strong id="wx-rh">--</strong></span>
+  <span>Updated <strong id="wx-time">--</strong></span>
+</div>
+
+<div class="console">
+  <div class="monitor">
+    <div class="screen">
+      <iframe src="https://www.youtube.com/embed/live_stream?channel=UC4nij4NgHjDJ8i5tv-1wWIA&amp;autoplay=1&amp;mute=1"
+        title="NorthBamaWX live weather stream" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen loading="eager"></iframe>
+    </div>
+    <h1>Live radar and severe weather alerts, around the clock</h1>
+    <p>NorthBamaWX watches the radar for North Alabama and Southern Tennessee every minute of every day. When the National Weather Service issues a warning for our counties, the stream switches to the storm, maps the warning, and reads it out loud right away, day or night.</p>
+    <div class="cta">
+      <a class="btn primary" href="https://www.youtube.com/channel/UC4nij4NgHjDJ8i5tv-1wWIA?sub_confirmation=1" target="_blank" rel="noopener">Subscribe on YouTube</a>
+      <a class="btn" href="https://www.facebook.com/NorthBamaWeather/" target="_blank" rel="noopener">Follow on Facebook</a>
+    </div>
+  </div>
+
+  <aside class="board" aria-labelledby="board-title">
+    <div class="board-head">
+      <h2 id="board-title">Active Alerts</h2>
+      <span id="alerts-updated">checking…</span>
+    </div>
+    <ul id="alerts"></ul>
+    <div class="board-foot">From the National Weather Service for our 15 counties. Updates every 2 minutes. Tap an alert for details.</div>
+  </aside>
+</div>
+
+<section class="band">
+  <h2>What the stream does</h2>
+  <p class="lede">Everything on the stream runs on its own. No one has to be awake for the warning to reach you.</p>
+  <div class="features">
+    <div class="feature"><h3>Spoken warnings</h3><p>Tornado, severe thunderstorm and flash flood warnings are read aloud the moment they're issued, with the warning outlined on the map.</p></div>
+    <div class="feature"><h3>Storm mode</h3><p>During a warning the stream locks onto the local radar and stays there until the threat is over.</p></div>
+    <div class="feature"><h3>Hourly updates</h3><p>Current conditions, the forecast and the outlook from the Storm Prediction Center, spoken at the top of every hour.</p></div>
+    <div class="feature"><h3>Tropics</h3><p>Hurricane and tropical storm tracking with observed winds, storm surge and damage reports when a storm threatens the Gulf Coast.</p></div>
+  </div>
+</section>
+
+<section class="band">
+  <h2>Coverage area</h2>
+  <p class="lede">Alerts for these counties are spoken on the stream and shown above.</p>
+  <div class="counties">
+    <div class="state">
+      <h3>North Alabama</h3>
+      <ul class="chips">
+        <li>Lauderdale</li><li>Colbert</li><li>Franklin</li><li>Lawrence</li><li>Limestone</li>
+        <li>Madison <small>Huntsville</small></li><li>Morgan <small>Decatur</small></li><li>Marshall</li>
+        <li>Jackson</li><li>DeKalb</li><li>Cullman</li>
+      </ul>
+    </div>
+    <div class="state">
+      <h3>Southern Tennessee</h3>
+      <ul class="chips">
+        <li>Giles</li><li>Lincoln <small>Fayetteville</small></li><li>Moore</li><li>Franklin <small>Winchester</small></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <h2>Follow</h2>
+  <p class="lede">Turn on notifications so you know the moment the stream goes into storm mode.</p>
+  <div class="follow">
+    <a class="btn primary" href="https://www.youtube.com/channel/UC4nij4NgHjDJ8i5tv-1wWIA/live" target="_blank" rel="noopener">Watch live on YouTube</a>
+    <a class="btn" href="https://www.facebook.com/NorthBamaWeather/" target="_blank" rel="noopener">Facebook</a>
+    <a class="btn" href="https://www.weather.gov/hun/" target="_blank" rel="noopener">NWS Huntsville</a>
+  </div>
+</section>
+
+<footer>
+  <span>NorthBamaWX is an independent weather stream and is not affiliated with the National Weather Service. Always follow official warnings and your local emergency officials.</span>
+  <span>Alert and observation data: National Weather Service (api.weather.gov).</span>
+</footer>
+
+</div>
+
+<script>
+// NWS zones for the coverage area -- same list as local_predictor.MONITORED_ZONES.
+const ZONES = ['ALC033','ALC043','ALC049','ALC059','ALC071','ALC079','ALC077','ALC083','ALC089','ALC095','ALC103',
+  'ALZ001','ALZ002','ALZ003','ALZ004','ALZ005','ALZ006','ALZ007','ALZ008','ALZ009','ALZ010','ALZ016',
+  'TNC051','TNC055','TNC103','TNC127','TNZ076','TNZ095','TNZ096','TNZ097'];
+
+// Same colors the stream's map uses.
+function alertColor(ev) {
+  const e = ev.toLowerCase();
+  if (e.includes('tornado')) return e.includes('watch') ? '#FF8C00' : '#FF2B2B';
+  if (e.includes('extreme wind')) return '#E65C19';
+  if (e.includes('severe thunderstorm')) return e.includes('watch') ? '#FFD700' : '#FFA500';
+  if (e.includes('flash flood') || e.includes('flood warning')) return '#22e05a';
+  if (e.includes('flood')) return '#2E8B57';
+  if (e.includes('high wind')) return '#DAA520';
+  if (e.includes('wind advisory')) return '#DA70D6';
+  if (e.includes('winter storm')) return e.includes('watch') ? '#4682B4' : '#FF69B4';
+  if (e.includes('winter weather')) return '#7B68EE';
+  if (e.includes('ice storm')) return '#B05CFF';
+  if (e.includes('heat')) return '#FF7E00';
+  if (e.includes('freeze') || e.includes('frost')) return '#99CCEE';
+  if (e.includes('special weather')) return '#FFE4B5';
+  if (e.includes('hurricane') || e.includes('tropical')) return '#FF4FA3';
+  return '#8a99ad';
+}
+function rank(ev) {
+  const e = ev.toLowerCase();
+  if (e.includes('emergency')) return 0;
+  if (e.startsWith('tornado warning')) return 1;
+  if (e.includes('warning')) return 2;
+  if (e.includes('watch')) return 3;
+  if (e.includes('advisory')) return 4;
+  return 5;
+}
+const fmtTime = iso => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+};
+
+async function loadAlerts() {
+  const list = document.getElementById('alerts');
+  const stamp = document.getElementById('alerts-updated');
+  try {
+    const r = await fetch('https://api.weather.gov/alerts/active?zone=' + ZONES.join(','), { headers: { Accept: 'application/geo+json' } });
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    const seen = new Set();
+    const alerts = (data.features || []).map(f => f.properties).filter(p => {
+      if (!p || p.status !== 'Actual' || seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    }).sort((a, b) => rank(a.event) - rank(b.event) || a.event.localeCompare(b.event));
+
+    list.textContent = '';
+    if (!alerts.length) {
+      const li = document.createElement('li');
+      li.className = 'board-empty';
+      li.innerHTML = '<strong>All clear</strong>No watches, warnings or advisories for our counties right now.';
+      list.appendChild(li);
+    }
+    alerts.forEach(p => {
+      const li = document.createElement('li');
+      li.className = 'alert';
+      li.style.setProperty('--c', alertColor(p.event));
+      const btn = document.createElement('button');
+      btn.setAttribute('aria-expanded', 'false');
+      const ev = document.createElement('div'); ev.className = 'ev'; ev.textContent = p.event;
+      const area = document.createElement('div'); area.className = 'area'; area.textContent = p.areaDesc;
+      const until = document.createElement('div'); until.className = 'until';
+      until.textContent = (p.ends || p.expires) ? 'Until ' + fmtTime(p.ends || p.expires) : '';
+      btn.append(ev, area, until);
+      const desc = document.createElement('div'); desc.className = 'desc';
+      desc.textContent = [p.headline, p.description, p.instruction].filter(Boolean).join('\n\n');
+      btn.addEventListener('click', () => {
+        const open = li.classList.toggle('open');
+        btn.setAttribute('aria-expanded', String(open));
+      });
+      li.append(btn, desc);
+      list.appendChild(li);
+    });
+    stamp.textContent = 'as of ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  } catch (e) {
+    stamp.textContent = 'retrying…';
+    if (!list.children.length) {
+      const li = document.createElement('li');
+      li.className = 'board-empty';
+      li.textContent = "Couldn't reach the National Weather Service. Trying again in 2 minutes. The live stream above still shows every alert.";
+      list.appendChild(li);
+    }
+  }
+}
+
+const compass = deg => deg == null ? '' : ['N','NE','E','SE','S','SW','W','NW'][Math.round(deg / 45) % 8];
+async function loadConditions() {
+  try {
+    const r = await fetch('https://api.weather.gov/stations/KHSV/observations/latest', { headers: { Accept: 'application/geo+json' } });
+    if (!r.ok) throw new Error(r.status);
+    const p = (await r.json()).properties;
+    const c = p.temperature && p.temperature.value;
+    if (c != null) document.getElementById('wx-temp').textContent = Math.round(c * 9 / 5 + 32) + '°';
+    document.getElementById('wx-desc').textContent = p.textDescription || '';
+    const ws = p.windSpeed && p.windSpeed.value;   // km/h
+    const wg = p.windGust && p.windGust.value;
+    let wind = ws == null ? '--' : (ws < 1 ? 'Calm' : `${compass(p.windDirection && p.windDirection.value)} ${Math.round(ws * 0.621371)} mph`);
+    if (wg) wind += `, gusts ${Math.round(wg * 0.621371)}`;
+    document.getElementById('wx-wind').textContent = wind;
+    const rh = p.relativeHumidity && p.relativeHumidity.value;
+    document.getElementById('wx-rh').textContent = rh == null ? '--' : Math.round(rh) + '%';
+    document.getElementById('wx-time').textContent = p.timestamp ? new Date(p.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '--';
+  } catch (e) {
+    document.getElementById('wx-desc').textContent = 'Conditions unavailable right now';
+  }
+}
+
+loadAlerts(); loadConditions();
+setInterval(loadAlerts, 120000);
+setInterval(loadConditions, 600000);
+</script>
+</body>
+</html>
