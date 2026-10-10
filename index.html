@@ -162,7 +162,7 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
 <div class="console">
   <div class="monitor">
     <div class="screen">
-      <iframe src="https://www.youtube.com/embed/live_stream?channel=UC4nij4NgHjDJ8i5tv-1wWIA&amp;autoplay=1&amp;mute=1"
+      <iframe id="player" src="about:blank"
         title="NorthBamaWX live weather stream" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen loading="eager"></iframe>
     </div>
     <h1>Live radar and severe weather alerts, around the clock</h1>
@@ -348,7 +348,20 @@ async function loadConditions() {
   }
 }
 
-loadAlerts(); loadConditions();
+// The bot writes the current live video ID to live.json whenever the stream
+// restarts; the channel-based embed is the fallback if that file is missing.
+async function loadPlayer() {
+  const player = document.getElementById('player');
+  let src = 'https://www.youtube.com/embed/live_stream?channel=UC4nij4NgHjDJ8i5tv-1wWIA&autoplay=1&mute=1';
+  try {
+    const r = await fetch('live.json?t=' + Date.now(), { cache: 'no-store' });
+    const id = r.ok && (await r.json()).id;
+    if (id && /^[A-Za-z0-9_-]{11}$/.test(id)) src = `https://www.youtube.com/embed/${id}?autoplay=1&mute=1`;
+  } catch (e) {}
+  player.src = src;
+}
+
+loadPlayer(); loadAlerts(); loadConditions();
 setInterval(loadAlerts, 120000);
 setInterval(loadConditions, 600000);
 </script>
