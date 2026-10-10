@@ -23,6 +23,12 @@
 <meta property="og:description" content="Live radar and severe weather alerts for North Alabama and Southern Tennessee, around the clock.">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#0a1626">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NorthBamaWX">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script data-goatcounter="https://northbamawx.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230a1626'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='%2333d6ff' stroke-width='4'/%3E%3Cpath d='M32 32 L46 18' stroke='%2333d6ff' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -75,6 +81,21 @@ header {
 @keyframes pulse { 50% { opacity: 0.25; } }
 
 .back-link { font: 700 15px/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; text-decoration: none; }
+
+/* Section menu: sticks under the storm banner (if any) */
+.secnav { position: sticky; top: var(--nav-top, 0px); z-index: 900; margin-inline: -16px; padding: 0 16px;
+  background: rgba(10,22,38,0.94); backdrop-filter: blur(6px); border-bottom: 1px solid var(--rule); }
+.secnav ul { list-style: none; margin: 0 auto; padding: 0; max-width: 1240px; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.secnav ul::-webkit-scrollbar { display: none; }
+.secnav a { display: block; padding: 11px 10px; white-space: nowrap; text-decoration: none; color: var(--ink-dim);
+  font: 700 14px/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; border-bottom: 2px solid transparent; }
+.secnav a:hover { color: var(--ink); }
+.secnav a[aria-current="true"] { color: var(--radar); border-bottom-color: var(--radar); }
+.secnav a.hot { color: #ff4fa3; }
+section.band, #live { scroll-margin-top: calc(var(--nav-top, 0px) + 54px); }
+.install-btn { all: unset; cursor: pointer; font: 700 15px/1 var(--display); letter-spacing: 0.1em; text-transform: uppercase; color: var(--radar); }
+.install-btn:focus-visible { outline: 2px solid var(--radar); outline-offset: 3px; }
+.install-tip { margin-top: 10px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; font-size: 14px; }
 
 /* Conditions strip */
 .wx-strip {
@@ -368,11 +389,34 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
     <div class="tag" style="margin-top:6px">Live weather intelligence · North Alabama &amp; Southern Tennessee</div>
   </div>
   <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+  <button type="button" class="install-btn" id="install-btn" hidden>Get the app</button>
   <a class="back-link" href="safety.html">Storm safety</a>
   <a class="live-pill" href="https://www.youtube.com/channel/UC4nij4NgHjDJ8i5tv-1wWIA/live" target="_blank" rel="noopener">Live 24/7</a>
   </div>
 </header>
 
+<nav class="secnav" aria-label="Sections">
+  <ul>
+    <li><a href="#live">Live</a></li>
+    <li><a href="#tropics" id="nav-tropics" class="hot" hidden>Tropics</a></li>
+    <li><a href="#alerts-map">Alerts</a></li>
+    <li><a href="#live-radar">Radar</a></li>
+    <li><a href="#forecast">Forecast</a></li>
+    <li><a href="#river-levels">Rivers</a></li>
+    <li><a href="#rainfall">Rain</a></li>
+    <li><a href="#cameras">Cameras</a></li>
+    <li><a href="#reports">Reports</a></li>
+    <li><a href="#outlook">Outlook</a></li>
+    <li><a href="#videos">Videos</a></li>
+    <li><a href="#weather-news">News</a></li>
+    <li><a href="#phone-alerts">Phone alerts</a></li>
+    <li><a href="safety.html">Safety</a></li>
+  </ul>
+</nav>
+
+<div class="install-tip" id="install-tip" hidden>
+  <strong>Add NorthBamaWX to your home screen:</strong> tap the Share button <span aria-hidden="true">(&#x2191;)</span> at the bottom of Safari, then <strong>Add to Home Screen</strong>.
+</div>
 <div class="wx-strip" id="wx" aria-live="polite">
   <span class="temp" id="wx-temp">--°</span>
   <span><strong>Huntsville</strong> <span id="wx-desc">Loading current conditions…</span></span>
@@ -381,7 +425,7 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
   <span>Updated <strong id="wx-time">--</strong></span>
 </div>
 
-<div class="console">
+<div class="console" id="live">
   <div class="monitor">
     <div class="screen">
       <iframe id="player" src="about:blank" referrerpolicy="strict-origin-when-cross-origin"
@@ -417,14 +461,14 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
   <div id="trop-list"></div>
 </section>
 
-<section class="band" aria-labelledby="vids-title">
+<section class="band" aria-labelledby="vids-title" id="videos">
   <h2 id="vids-title">Latest Videos</h2>
   <p class="lede">Warning clips, daily forecasts and storm recaps from the stream. Tap one to play it here.</p>
   <div class="vids" id="vids"><p class="news-empty">Loading videos…</p></div>
   <a class="btn more-link" href="https://www.youtube.com/channel/UC4nij4NgHjDJ8i5tv-1wWIA/shorts" target="_blank" rel="noopener">See all on YouTube</a>
 </section>
 
-<section class="band" aria-labelledby="amap-title">
+<section class="band" aria-labelledby="amap-title" id="alerts-map">
   <h2 id="amap-title">Alerts Map</h2>
   <p class="lede">Our 15 counties, shaded by the most serious watch or advisory in effect. Warnings are drawn as outlines. Tap a county for details.</p>
   <div class="amap-box">
@@ -433,7 +477,7 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
   </div>
 </section>
 
-<section class="band" aria-labelledby="push-title">
+<section class="band" aria-labelledby="push-title" id="phone-alerts">
   <h2 id="push-title">Get Alerts on Your Phone</h2>
   <p class="lede">Free push alerts the moment a warning is issued for our counties. No account, no email, no ads.</p>
   <div class="alerts-signup">
@@ -466,21 +510,21 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
   </div>
 </section>
 
-<section class="band" aria-labelledby="lsr-title">
+<section class="band" aria-labelledby="lsr-title" id="reports">
   <h2 id="lsr-title">Storm Reports</h2>
   <p class="lede">Damage, flooding, hail and wind reports sent to the National Weather Service from our counties in the last 48 hours. They're also marked on the Alerts Map.</p>
   <ul class="lsr" id="lsr"><li class="news-empty">Loading reports…</li></ul>
   <div class="lsr-src">Reports: National Weather Service local storm reports via Iowa Environmental Mesonet. Updated every 5 minutes.</div>
 </section>
 
-<section class="band" aria-labelledby="river-title">
+<section class="band" aria-labelledby="river-title" id="river-levels">
   <h2 id="river-title">River &amp; Creek Levels</h2>
   <p class="lede">Weather service river gauges in our counties, closest to flood stage first. The bar shows how close each one is to flooding. Tap a gauge for its full forecast.</p>
   <ul class="rivers" id="rivers"><li class="news-empty">Loading gauges…</li></ul>
   <div class="lsr-src">Gauges: NOAA National Water Prediction Service. Updated every 10 minutes.</div>
 </section>
 
-<section class="band" aria-labelledby="rain-title">
+<section class="band" aria-labelledby="rain-title" id="rainfall">
   <h2 id="rain-title">Rainfall Totals</h2>
   <p class="lede">How much rain has fallen across the Tennessee Valley, estimated from radar and rain gauges. Drag and zoom to look around.</p>
   <div class="tabs" role="tablist" aria-label="Rainfall period" id="rain-tabs">
@@ -492,7 +536,7 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
   <div class="rain-key"><span>Inches of rain</span><img src="https://mesonet.agron.iastate.edu/images/mrms_q3_p24h.png" alt="Color key: 0.01 to 15 inches" width="256" height="30"><span>Source: NOAA MRMS via Iowa Environmental Mesonet</span></div>
 </section>
 
-<section class="band" aria-labelledby="radar-title">
+<section class="band" aria-labelledby="radar-title" id="live-radar">
   <h2 id="radar-title">Live Radar</h2>
   <p class="lede">The last hour of radar, with active warnings outlined. Drag and zoom to look around. Tap a warning for details.</p>
   <div class="radar-box">
@@ -504,14 +548,14 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
   </div>
 </section>
 
-<section class="band" aria-labelledby="cams-title">
+<section class="band" aria-labelledby="cams-title" id="cameras">
   <h2 id="cams-title">Local Cameras</h2>
   <p class="lede">Live road views across North Alabama. Pictures refresh every minute. Tap one to watch live on ALGO Traffic.</p>
   <div class="cams" id="cams"></div>
   <div class="cams-src">Cameras: Alabama Department of Transportation (ALGO Traffic)</div>
 </section>
 
-<section class="band" aria-labelledby="fc-title">
+<section class="band" aria-labelledby="fc-title" id="forecast">
   <h2 id="fc-title">7-Day Forecast</h2>
   <p class="lede">Huntsville and the Tennessee Valley. Tap a day for the full forecast.</p>
   <div class="fc-wrap"><div class="fc" id="fc"><p class="news-empty">Loading forecast…</p></div></div>
@@ -524,7 +568,7 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
   </div>
 </section>
 
-<section class="band" aria-labelledby="spc-title">
+<section class="band" aria-labelledby="spc-title" id="outlook">
   <h2 id="spc-title">Severe Weather Outlook</h2>
   <p class="lede">The Storm Prediction Center's risk of severe storms across the country for the next three days.</p>
   <div class="tabs" role="tablist" aria-label="Outlook day">
@@ -541,13 +585,13 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
   </div>
 </section>
 
-<section class="band" aria-labelledby="hist-title">
+<section class="band" aria-labelledby="hist-title" id="weather-history">
   <h2 id="hist-title">This Day in Weather History</h2>
   <p class="lede" id="hist-lede">Remembering the storms that shaped Alabama and the Tennessee Valley.</p>
   <div class="history" id="history"></div>
 </section>
 
-<section class="band" aria-labelledby="news-title">
+<section class="band" aria-labelledby="news-title" id="weather-news">
   <h2 id="news-title">National Weather News</h2>
   <p class="lede">The latest weather headlines from around the country. Updated every 30 minutes.</p>
   <ul class="news" id="news"><li class="news-empty">Loading headlines…</li></ul>
@@ -1273,6 +1317,50 @@ async function loadNow() {
 }
 loadNow();
 setInterval(loadNow, 600000);
+
+// ---- Section menu: sit below the storm banner and highlight the current section ----
+function placeNav() {
+  const b = document.getElementById('storm-banner');
+  document.documentElement.style.setProperty('--nav-top', (b && !b.hidden ? b.offsetHeight : 0) + 'px');
+  document.getElementById('nav-tropics').hidden = document.getElementById('tropics').hidden;
+}
+setInterval(placeNav, 2000); window.addEventListener('resize', placeNav); placeNav();
+(() => {
+  const links = [...document.querySelectorAll('.secnav a[href^="#"]')];
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (!en.isIntersecting) return;
+      links.forEach(a => {
+        const on = a.getAttribute('href') === '#' + en.target.id;
+        if (on) { a.setAttribute('aria-current', 'true'); a.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+        else a.removeAttribute('aria-current');
+      });
+    });
+  }, { rootMargin: '-45% 0px -50% 0px' });
+  links.forEach(a => { const t = document.querySelector(a.getAttribute('href')); if (t) io.observe(t); });
+})();
+
+// ---- Install as an app ----
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+let installPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); installPrompt = e;
+  document.getElementById('install-btn').hidden = false;
+});
+document.getElementById('install-btn').addEventListener('click', async () => {
+  if (installPrompt) {
+    installPrompt.prompt();
+    await installPrompt.userChoice.catch(() => {});
+    installPrompt = null;
+    document.getElementById('install-btn').hidden = true;
+  } else {
+    document.getElementById('install-tip').hidden = false;
+  }
+});
+// iPhone/iPad Safari has no install prompt; show the button with how-to instead.
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+if (isIOS && !standalone) document.getElementById('install-btn').hidden = false;
 
 // ---- Rainfall totals (MRMS 24/48/72 h tiles from IEM) ----
 let rainMap = null, rainLayer = null;
