@@ -241,6 +241,22 @@ section.band { padding-block: 34px; border-top: 1px solid var(--rule); }
 .rivers .bar { height: 5px; margin-top: 7px; background: var(--night); border-radius: 3px; overflow: hidden; }
 .rivers .bar i { display: block; height: 100%; background: var(--pc, #4ade80); }
 
+/* Rainfall map */
+.rain-box { position: relative; height: 480px; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: #0d1b2e; }
+#rainmap { position: absolute; inset: 0; background: #0d1b2e; }
+.rain-key { margin-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font: 500 12px/1.4 var(--data); color: var(--ink-dim); }
+.rain-key img { height: 26px; width: auto; max-width: 100%; border-radius: 3px; background: #fff; }
+@media (max-width: 600px) { .rain-box { height: 380px; } }
+
+/* This day in weather history */
+.history { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 6px 24px; align-items: start; background: var(--panel);
+  border: 1px solid var(--rule); border-radius: 6px; padding: 18px 20px; }
+.history .yr { font: 800 44px/1 var(--display); color: var(--radar); letter-spacing: 0.02em; }
+.history .dt { font: 600 11px/1.4 var(--data); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-dim); margin-top: 6px; }
+.history h3 { font: 700 24px/1.15 var(--display); letter-spacing: 0.02em; margin: 0 0 6px; text-wrap: balance; }
+.history p { margin: 0; max-width: 70ch; }
+@media (max-width: 600px) { .history { grid-template-columns: minmax(0, 1fr); } }
+
 /* SPC outlook */
 .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .tabs button { all: unset; cursor: pointer; font: 700 16px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase;
@@ -458,6 +474,18 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
   <div class="lsr-src">Gauges: NOAA National Water Prediction Service. Updated every 10 minutes.</div>
 </section>
 
+<section class="band" aria-labelledby="rain-title">
+  <h2 id="rain-title">Rainfall Totals</h2>
+  <p class="lede">How much rain has fallen across the Tennessee Valley, estimated from radar and rain gauges. Drag and zoom to look around.</p>
+  <div class="tabs" role="tablist" aria-label="Rainfall period" id="rain-tabs">
+    <button type="button" role="tab" aria-selected="true" data-h="24">Last 24 hours</button>
+    <button type="button" role="tab" aria-selected="false" data-h="48">48 hours</button>
+    <button type="button" role="tab" aria-selected="false" data-h="72">72 hours</button>
+  </div>
+  <div class="rain-box"><div id="rainmap" role="region" aria-label="Rainfall totals map"></div></div>
+  <div class="rain-key"><span>Inches of rain</span><img src="https://mesonet.agron.iastate.edu/images/mrms_q3_p24h.png" alt="Color key: 0.01 to 15 inches" width="256" height="30"><span>Source: NOAA MRMS via Iowa Environmental Mesonet</span></div>
+</section>
+
 <section class="band" aria-labelledby="radar-title">
   <h2 id="radar-title">Live Radar</h2>
   <p class="lede">The last hour of radar, with active warnings outlined. Drag and zoom to look around. Tap a warning for details.</p>
@@ -505,6 +533,12 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
     <span style="--k:#c1e9c1">General thunder</span><span style="--k:#66a366">1 Marginal</span><span style="--k:#ffe066">2 Slight</span>
     <span style="--k:#ffa366">3 Enhanced</span><span style="--k:#e06666">4 Moderate</span><span style="--k:#ee99ee">5 High</span>
   </div>
+</section>
+
+<section class="band" aria-labelledby="hist-title">
+  <h2 id="hist-title">This Day in Weather History</h2>
+  <p class="lede" id="hist-lede">Remembering the storms that shaped Alabama and the Tennessee Valley.</p>
+  <div class="history" id="history"></div>
 </section>
 
 <section class="band" aria-labelledby="news-title">
@@ -1082,8 +1116,8 @@ async function loadVideos() {
 }
 
 // ---- SPC outlook tabs ----
-document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => {
-  document.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-selected', String(x === b)));
+document.querySelectorAll('.tabs[aria-label="Outlook day"] button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.tabs[aria-label="Outlook day"] button').forEach(x => x.setAttribute('aria-selected', String(x === b)));
   const d = b.dataset.day;
   const img = document.getElementById('spc-img');
   img.src = 'https://www.spc.noaa.gov/products/outlook/day' + d + 'otlk.png?t=' + Math.floor(Date.now() / 600000);
@@ -1232,6 +1266,83 @@ async function loadNow() {
 }
 loadNow();
 setInterval(loadNow, 600000);
+
+// ---- Rainfall totals (MRMS 24/48/72 h tiles from IEM) ----
+let rainMap = null, rainLayer = null;
+function setRainPeriod(h) {
+  if (!rainMap) return;
+  if (rainLayer) rainMap.removeLayer(rainLayer);
+  const slot = Math.floor(Date.now() / 900000);
+  rainLayer = L.tileLayer(`https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/q2-p${h}h-900913/{z}/{x}/{y}.png?${slot}`,
+    { opacity: 0.75, maxNativeZoom: 10, maxZoom: 11, zIndex: 5 }).addTo(rainMap);
+}
+async function initRainMap() {
+  if (!window.L) return;
+  rainMap = L.map('rainmap', { scrollWheelZoom: false, attributionControl: true, zoomSnap: 0.25, maxZoom: 11, minZoom: 6 });
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    maxNativeZoom: 16, attribution: 'Esri | Rainfall: NOAA MRMS / Iowa Environmental Mesonet' }).addTo(rainMap);
+  rainMap.createPane('labels'); rainMap.getPane('labels').style.zIndex = 650; rainMap.getPane('labels').style.pointerEvents = 'none';
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { pane: 'labels' }).addTo(rainMap);
+  setRainPeriod(24);
+  try {
+    const gj = await (await fetch('counties.geojson')).json();
+    const lines = L.geoJSON(gj, { pane: 'labels', style: { color: '#e8f0fa', weight: 1.5, opacity: 0.8, fill: false } }).addTo(rainMap);
+    rainMap.fitBounds(lines.getBounds(), { padding: [10, 10] });
+  } catch (e) { rainMap.setView([34.75, -86.6], 8); }
+  document.querySelectorAll('#rain-tabs button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#rain-tabs button').forEach(x => x.setAttribute('aria-selected', String(x === b)));
+    setRainPeriod(b.dataset.h);
+  }));
+  setInterval(() => setRainPeriod(document.querySelector('#rain-tabs [aria-selected="true"]').dataset.h), 900000);
+}
+initRainMap();
+
+// ---- This day in weather history ----
+const WX_HISTORY = [
+  ['01-21', 1985, 'Record Cold in Huntsville', 'Huntsville fell to 11 degrees below zero, one of the coldest readings ever recorded there.'],
+  ['03-01', 2007, 'Enterprise High School Tornado', 'An EF4 tornado struck Enterprise High School, killing eight students. It led to stronger school safety plans across Alabama.'],
+  ['03-13', 1993, 'Storm of the Century', 'The Superstorm of 1993 buried North Alabama in snow, with more than a foot of snow in places and travel shut down for days.'],
+  ['03-21', 1932, 'Deep South Tornado Outbreak', 'One of the deadliest outbreaks in Alabama history. Tornadoes killed more than 260 people across the state in a single night.'],
+  ['03-27', 1994, 'Palm Sunday Tornado Outbreak', 'Tornadoes struck across Alabama on Palm Sunday, killing more than 20 people, including 20 at a church in Piedmont.'],
+  ['04-03', 1974, 'Super Outbreak', 'One of the largest tornado outbreaks on record struck the Southeast. Alabama took a direct hit, including F5 tornadoes at Guin and Tanner.'],
+  ['04-08', 1998, 'Birmingham F5 Tornado', 'An F5 tornado tore through western Jefferson County, killing 32 people.'],
+  ['04-27', 2011, 'April 27 Tornado Outbreak', 'The deadliest tornado outbreak in Alabama history. Dozens of tornadoes, including EF5s at Hackleburg and Phil Campbell, killed more than 250 people statewide.'],
+  ['04-28', 2014, 'Limestone County Tornado', 'An EF3 tornado tore through western Limestone County near Athens, one of several tornadoes in North Alabama that night.'],
+  ['07-29', 1930, 'Record Heat in Huntsville', 'Huntsville reached 108 degrees, its all-time record high, during the great heat wave of 1930.'],
+  ['09-16', 2004, 'Hurricane Ivan', 'Hurricane Ivan made landfall near Gulf Shores. Its remnants brought heavy rain, wind damage and tornadoes into North Alabama.'],
+  ['11-15', 1989, 'Huntsville Tornado', 'An F4 tornado struck south Huntsville and Airport Road during rush hour, killing 21 people. It remains one of the deadliest tornadoes in North Alabama history.'],
+  ['12-16', 2000, 'Tuscaloosa Tornado', 'An F4 tornado struck Tuscaloosa just before Christmas, killing 11 people. December severe weather is a real threat in Alabama.'],
+  ['12-25', 2012, 'Christmas Day Tornadoes', 'A rare Christmas Day outbreak brought tornadoes to South Alabama, including an EF2 that struck Mobile.'],
+];
+function showHistory() {
+  const now = new Date(), year = now.getFullYear();
+  const md = d => String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const today = md(now);
+  let pick = WX_HISTORY.find(e => e[0] === today), lede = 'On this day in Alabama weather history.';
+  if (!pick) {
+    // Otherwise the next anniversary coming up.
+    const dateOf = e => { const [m, d] = e[0].split('-').map(Number); let t = new Date(year, m - 1, d); if (t < now) t = new Date(year + 1, m - 1, d); return t; };
+    pick = WX_HISTORY.slice().sort((a, b) => dateOf(a) - dateOf(b))[0];
+    const days = Math.ceil((dateOf(pick) - now) / 86400000);
+    lede = `Coming up in ${days} day${days === 1 ? '' : 's'}: an anniversary from Alabama weather history.`;
+  }
+  const [mmdd, yr, title, text] = pick;
+  const [m, d] = mmdd.split('-').map(Number);
+  document.getElementById('hist-lede').textContent = lede;
+  const box = document.getElementById('history');
+  box.textContent = '';
+  const left = document.createElement('div');
+  const y = document.createElement('div'); y.className = 'yr'; y.textContent = yr;
+  const dt = document.createElement('div'); dt.className = 'dt';
+  dt.textContent = new Date(2000, m - 1, d).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+  left.append(y, dt);
+  const right = document.createElement('div');
+  const h = document.createElement('h3'); h.textContent = title;
+  const p2 = document.createElement('p'); p2.textContent = text;
+  right.append(h, p2);
+  box.append(left, right);
+}
+showHistory();
 
 // ---- River & creek levels (NOAA NWPS) ----
 // Gauges in or along our counties. Pool-elevation gauges (dam headwater) are left out.
