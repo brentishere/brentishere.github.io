@@ -129,6 +129,27 @@ section.band { padding-block: 34px; border-top: 1px solid var(--rule); }
 
 .follow { display: flex; flex-wrap: wrap; gap: 12px; }
 
+/* 7-day forecast: one column per day, scrolls sideways on phones */
+.fc-wrap { overflow-x: auto; padding-bottom: 4px; }
+.fc { display: grid; grid-template-columns: repeat(7, minmax(132px, 1fr)); gap: 10px; min-width: min-content; }
+.day {
+  all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 14px 10px; text-align: center; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px;
+}
+.day:hover { border-color: var(--radar); }
+.day[aria-pressed="true"] { border-color: var(--radar); box-shadow: inset 0 0 0 1px var(--radar); }
+.day .dname { font: 700 18px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; }
+.day img { width: 64px; height: 64px; border-radius: 6px; }
+.day .temps { font: 700 26px/1 var(--display); font-variant-numeric: tabular-nums; }
+.day .temps small { font-size: 18px; color: var(--ink-dim); margin-left: 6px; }
+.day .short { font-size: 13px; line-height: 1.3; color: var(--ink-dim); min-height: 3.9em; }
+.day .pop { font: 500 11px/1 var(--data); letter-spacing: 0.06em; color: var(--radar); min-height: 11px; }
+.fc-detail { margin-top: 18px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px 32px; }
+.fc-detail div { min-width: 0; }
+.fc-detail h3 { font: 700 18px/1.2 var(--display); letter-spacing: 0.05em; color: var(--radar); margin: 0 0 4px; }
+.fc-detail p { margin: 0; color: var(--ink); max-width: 62ch; }
+.fc-src { margin-top: 14px; font: 500 11px/1.4 var(--data); color: var(--ink-dim); letter-spacing: 0.04em; }
+
 .news { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 32px; }
 .news li { min-width: 0; border-top: 1px solid var(--rule); }
 .news a { display: block; padding-block: 14px; text-decoration: none; color: var(--ink); }
@@ -191,6 +212,14 @@ footer { padding-block: 26px 40px; border-top: 1px solid var(--rule); font-size:
     <div class="board-foot">From the National Weather Service for our 15 counties. Updates every 2 minutes. Tap an alert for details.</div>
   </aside>
 </div>
+
+<section class="band" aria-labelledby="fc-title">
+  <h2 id="fc-title">7-Day Forecast</h2>
+  <p class="lede">Huntsville and the Tennessee Valley. Tap a day for the full forecast.</p>
+  <div class="fc-wrap"><div class="fc" id="fc"><p class="news-empty">Loading forecast…</p></div></div>
+  <div class="fc-detail" id="fc-detail"></div>
+  <div class="fc-src" id="fc-src"></div>
+</section>
 
 <section class="band" aria-labelledby="news-title">
   <h2 id="news-title">National Weather News</h2>
@@ -408,7 +437,72 @@ async function loadNews() {
   });
 }
 
-loadPlayer(); loadAlerts(); loadConditions(); loadNews();
+// National Weather Service Huntsville forecast for the Huntsville grid point.
+const FORECAST_URL = 'https://api.weather.gov/gridpoints/HUN/63,43/forecast';
+let fcDays = [];
+function showDetail(i) {
+  const d = fcDays[i];
+  document.querySelectorAll('.day').forEach((b, j) => b.setAttribute('aria-pressed', String(j === i)));
+  const box = document.getElementById('fc-detail');
+  box.textContent = '';
+  [d.day, d.night].filter(Boolean).forEach(p => {
+    const div = document.createElement('div');
+    const h = document.createElement('h3'); h.textContent = p.name;
+    const t = document.createElement('p'); t.textContent = p.detailedForecast;
+    div.append(h, t); box.appendChild(div);
+  });
+}
+async function loadForecast() {
+  const grid = document.getElementById('fc');
+  try {
+    const r = await fetch(FORECAST_URL, { headers: { Accept: 'application/geo+json' } });
+    if (!r.ok) throw new Error(r.status);
+    const props = (await r.json()).properties;
+    const periods = props.periods || [];
+    // Pair each daytime period with the night after it; a forecast issued in
+    // the evening starts with "Tonight" alone.
+    fcDays = [];
+    for (let i = 0; i < periods.length && fcDays.length < 7; i++) {
+      const p = periods[i];
+      if (p.isDaytime) { fcDays.push({ day: p, night: periods[i + 1] && !periods[i + 1].isDaytime ? periods[++i] : null }); }
+      else { fcDays.push({ day: null, night: p }); }
+    }
+    grid.textContent = '';
+    fcDays.forEach((d, i) => {
+      const main = d.day || d.night;
+      const b = document.createElement('button');
+      b.className = 'day'; b.type = 'button';
+      const name = document.createElement('div'); name.className = 'dname';
+      // Use the date, not the period name: holidays are named ("Columbus Day").
+      name.textContent = i === 0 ? (d.day ? 'Today' : 'Tonight') : new Date(main.startTime).toLocaleDateString('en-US', { weekday: 'short' });
+      const img = document.createElement('img');
+      img.src = main.icon.replace('size=medium', 'size=large'); img.alt = main.shortForecast; img.loading = 'lazy';
+      const temps = document.createElement('div'); temps.className = 'temps';
+      if (d.day) {
+        temps.textContent = d.day.temperature + '°';
+        if (d.night) { const sm = document.createElement('small'); sm.textContent = d.night.temperature + '°'; temps.appendChild(sm); }
+      } else {
+        temps.textContent = 'Low ' + d.night.temperature + '°';
+      }
+      const short = document.createElement('div'); short.className = 'short'; short.textContent = main.shortForecast;
+      const pop = document.createElement('div'); pop.className = 'pop';
+      const chance = Math.max(...[d.day, d.night].filter(Boolean).map(p => (p.probabilityOfPrecipitation && p.probabilityOfPrecipitation.value) || 0));
+      pop.textContent = chance >= 10 ? `${chance}% chance of rain` : '';
+      b.append(name, img, temps, short, pop);
+      b.addEventListener('click', () => showDetail(i));
+      grid.appendChild(b);
+    });
+    showDetail(0);
+    const upd = props.updateTime || props.generatedAt;
+    document.getElementById('fc-src').textContent = 'National Weather Service Huntsville' +
+      (upd ? ' · issued ' + new Date(upd).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : '');
+  } catch (e) {
+    if (!fcDays.length) grid.innerHTML = '<p class="news-empty">The forecast is unavailable right now. Trying again shortly.</p>';
+  }
+}
+
+loadPlayer(); loadAlerts(); loadConditions(); loadNews(); loadForecast();
+setInterval(loadForecast, 1800000);
 setInterval(loadNews, 600000);
 setInterval(loadAlerts, 120000);
 setInterval(loadConditions, 600000);
