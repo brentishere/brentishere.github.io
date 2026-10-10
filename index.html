@@ -71,7 +71,7 @@ header {
 
 /* Main monitor + alert board */
 .console {
-  display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px;
+  display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; align-items: start;
   padding-block: 28px;
 }
 .monitor { min-width: 0; }
@@ -104,7 +104,7 @@ header {
   all: unset; box-sizing: border-box; cursor: pointer; display: block; width: 100%; padding: 10px 12px;
 }
 .alert .ev { font: 700 18px/1.15 var(--display); letter-spacing: 0.03em; color: var(--c, var(--ink)); }
-.alert .area { font-size: 13px; color: var(--ink); margin-top: 3px; }
+.alert .area { font-size: 13px; color: var(--ink); margin-top: 3px; overflow-wrap: anywhere; }
 .alert .until { font: 500 11px/1.3 var(--data); color: var(--ink-dim); margin-top: 5px; letter-spacing: 0.04em; }
 .alert .desc { display: none; padding: 0 12px 12px; font-size: 13px; color: var(--ink-dim); white-space: pre-line; }
 .alert.open .desc { display: block; }
@@ -336,8 +336,9 @@ async function loadConditions() {
     document.getElementById('wx-desc').textContent = p.textDescription || '';
     const ws = p.windSpeed && p.windSpeed.value;   // km/h
     const wg = p.windGust && p.windGust.value;
-    let wind = ws == null ? '--' : (ws < 1 ? 'Calm' : `${compass(p.windDirection && p.windDirection.value)} ${Math.round(ws * 0.621371)} mph`);
-    if (wg) wind += `, gusts ${Math.round(wg * 0.621371)}`;
+    let wind = ws == null ? '' : (ws < 1 ? 'Calm' : `${compass(p.windDirection && p.windDirection.value)} ${Math.round(ws * 0.621371)} mph`);
+    if (wg) wind += (wind ? ', gusts ' : 'Gusts ') + Math.round(wg * 0.621371) + (wind ? '' : ' mph');
+    if (!wind) wind = '--';
     document.getElementById('wx-wind').textContent = wind;
     const rh = p.relativeHumidity && p.relativeHumidity.value;
     document.getElementById('wx-rh').textContent = rh == null ? '--' : Math.round(rh) + '%';
