@@ -20,7 +20,7 @@ URL = 'https://news.google.com/rss/search?' + urllib.parse.urlencode(
 SKIP = re.compile(r'\?|\b(live updates?|live:|watch|video|photos?|how to|what to know|opinion|'
                   r'quiz|deals?|sale|stock|shares|crypto|nfl|nba|mlb|ncaa|football|game|recipe|horoscope|'
                   r'movie|album|song|ranked|best places|tracker|live radar|maps?|waffle house)\b', re.IGNORECASE)
-MAX_ITEMS = 10
+MAX_ITEMS = 9   # fills the 3-column grid evenly
 MAX_AGE_H = 24
 
 
